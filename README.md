@@ -136,13 +136,18 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 ## Roadmap
 
-- [ ] `install.sh` — complete and harden
-- [ ] Build a real GUI interface
-- [ ] Continue backend: manually control fan speed via EC write
-- [ ] Automate fan control based on CPU temperature (thermal curve)
-- [ ] Python ↔ C daemon communication via UNIX socket
-- [ ] Fan profiles: silent mode, gaming mode
-- [ ] Custom profile editor on GUI — drag points on a graph to set fan speed per temperature threshold (3 or 5 thresholds)
+### phase 1: closing the loop (backend logic)
+- [ ] **parse python commands:** update C backend to read "SET:XX", extract the value, and trigger `set_fan_speed(X)`.
+- [ ] **create controller.c (the brain):** maintain the targeted fan speed at each loop iteration so the hardware EC doesn't override the custom value.
+- [ ] **static profiles:** implement hardcoded modes in C (e.g., if mode == silent -> lock at 30%, if mode == gaming -> lock at 85%).
+
+### phase 2: advanced dashboard (frontend)
+- [ ] **custom fan curves:** build a GUI graph where the user can set custom speed % for specific temperature thresholds. send this data array to the C backend.
+- [ ] **ui/ux overhaul:** upgrade from standard tkinter to something cleaner (like `customtkinter` for a native, modern look).
+
+### phase 3: production (deployment)
+- [ ] **install.sh script:** automate `modprobe ec_sys` and socket permissions on the host system.
+- [ ] **systemd service:** set up a daemon to run the C backend automatically on boot in the background with `root` privileges.
 
 ---
 
