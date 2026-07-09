@@ -1,48 +1,39 @@
-#include "../include/hardware.h"
-#include <fcntl.h>   // for O_RDONLY
-#include <unistd.h>  // for read, close
+#include <fcntl.h>
+#include <unistd.h>
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdint.h>
+#include "../include/hardware.h"
 
-// will have to replace with good file, here is chore temp for GF63 Thin mo-bo
-#define TEMP_FILE "/sys/class/hwmon/hwmon4/temp1_input"
+#define EC_FILE "/sys/kernel/debug/ec/ec0/io"
+#define ADDR_CPU_TEMP 0x68
+#define ADDR_FAN_SPEED 0x71
 
-int read_cpu_temp() {
-    int fd = open(TEMP_FILE, O_RDONLY);
-    if (fd == -1) {
-        perror("Can't open temp file");
+// private
+static int read_ec_byte(off_t address) {
+    int fd = open(EC_FILE, O_RDONLY);
+    if (fd == -1) { return -1; }
+    
+    // start reading from the specified address
+    if (lseek(fd, address, SEEK_SET) == -1) {
+        close(fd);
         return -1;
     }
-
-    char buffer[16];
-    // read raw file
-    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-    close(fd);
-
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        int temp_millidegrees = atoi(buffer); // convert string to int
-        return temp_millidegrees / 1000;
+    
+    uint8_t byte_value;
+    if (read(fd, &byte_value, 1) != 1) {
+        close(fd);
+        return -1;
     }
+    
+    close(fd);
+    return byte_value;
+}
 
-    return -1;
+// public functions
+int read_cpu_temp() {
+    return read_ec_byte(ADDR_CPU_TEMP);
 }
 
 int read_fan_speed() {
-    int fd = open("/sys/class/hwmon/hwmon4/fan1_input", O_RDONLY);
-    if (fd == -1) {
-        perror("Can't open fan speed file");
-        return -1;
-    }
-
-    char buffer[16];
-    ssize_t bytes_read = read(fd, buffer, sizeof(buffer) - 1);
-    close(fd);
-
-    if (bytes_read > 0) {
-        buffer[bytes_read] = '\0';
-        return atoi(buffer); // convert string to int
-    }
-
-    return -1;
+    return read_ec_byte(ADDR_FAN_SPEED);
 }
