@@ -12,6 +12,7 @@ int read_fan_speed();
 int read_fan_speed_rpm();
 
 // set functions
+void set_fan_mode(int mode);
 int set_fan_speed(uint8_t speed_percent);
 
 // del functions
