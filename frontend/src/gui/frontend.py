@@ -4,7 +4,7 @@ from tkinter import ttk
 class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
-        self.root.title("EC Fan Controller")
+        self.root.title("Chore Chill")
         self.root.geometry("400x350")
         self.root.resizable(False, False)
 
