@@ -56,3 +56,7 @@ https://docs.kernel.org/wmi/devices/msi-wmi-platform.html
 CPU temp (read) : 0x68
 CPU fan speed (read) : 0x71
 Force fan speed (write) : 0x71
+
+## run
+gcc main.c hardware.c ipc.c -o ../compiled/v0
+sudo modprobe ec_sys write_support=1

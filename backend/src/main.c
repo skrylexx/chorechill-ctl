@@ -1,14 +1,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "../include/hardware.h"
+#include "../include/ipc.h"
 
 int main() {
     printf("Starting EC controller...\n");
 
+    printf("Starting socket...\n");
+    int sockfd = init_ipc();
+
     // test: force fan speed to X% at startup
     // // can be moved in while loop to force fan speed to X% at runtime
     // set_fan_speed(X);
-
     while(1) {
         int temp = read_cpu_temp();
         int fan = read_fan_speed();
@@ -21,9 +24,12 @@ int main() {
         }
         
         printf("Temperature : %d°C\nFan Speed : %d%% || RPM : %d\n", temp, fan, fan_rpm);
+        fflush(stdout);
         
-        // 1 second pause
-        sleep(1); 
+        handle_ipc_client(sockfd, temp, fan, fan_rpm);
+
+        sleep(1); // wait for 1 second before the next reading
+        // mandatory to avoid CPU overload, otherwise the program will run at 100% CPU usage
     }
 
     return 0;

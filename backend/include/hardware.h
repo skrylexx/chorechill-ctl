@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+// socket function
+int socket();
+
 // read functions
 int read_cpu_temp();
 int read_fan_speed();
