@@ -98,6 +98,10 @@ int read_fan_speed_rpm() {
     return read_ec_word(ADDR_FAN_SPEED_RPM);
 }
 
+void set_fan_mode(int mode) {
+    write_ec_byte(0xF4, mode); 
+}
+
 int set_fan_speed(uint8_t speed_percent) {
     return write_ec_byte(ADDR_FAN_SPEED, speed_percent);
 }
