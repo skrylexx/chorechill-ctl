@@ -9,11 +9,9 @@ int read_fan_speed();
 int read_fan_speed_rpm();
 
 // --- SET FUNCTIONS ---
-// kept doe the future
 void set_fan_mode(int mode);
 
-// hack to override the EC's native fan curve
-void set_custom_fan_curve();
-void reset_default_fan_curve();
+// inject 6 temperatures and 7 speeds directly into the EC memory
+void apply_custom_curve(uint8_t temps[6], uint8_t speeds[7]);
 
 #endif

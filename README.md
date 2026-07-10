@@ -1,6 +1,6 @@
 # Chore Chill CTL
 
-> A handmade fan control daemon for Linux, built to learn C and save an old MSI GF63 Thin from dying.
+> A handmade fan control daemon for Linux, built to save an old MSI GF63 Thin from dying.
 
 Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/debug/ec/ec0/io` to read CPU temperature and control fan speed at a low level.
 
