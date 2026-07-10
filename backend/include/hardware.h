@@ -14,8 +14,6 @@ void set_fan_mode(int mode);
 
 // hack to override the EC's native fan curve
 void set_custom_fan_curve();
-
-// test purposes
 void reset_default_fan_curve();
 
 #endif

@@ -14,6 +14,7 @@ chorechill-ctl/
 ├── Makefile                   # C build automation
 ├── README.md                  # You are here
 ├── How2Get_Good_Addresses.md  # EC investigation guide (hexdump method)
+├── config/                    # .json file containing default EC curve values and user's custom profile
 ├── backend/                   # C daemon
 │   ├── include/
 │   │   ├── hardware.h         # Signatures for EC I/O (/sys/kernel/debug/ec/ec0/io)
