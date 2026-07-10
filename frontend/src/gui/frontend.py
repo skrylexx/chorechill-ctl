@@ -5,7 +5,8 @@ class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
         self.root.title("Chore Chill")
-        self.root.geometry("400x350")
+        # Augmentation de la hauteur (520) et largeur (420) pour que le texte rentre largement
+        self.root.geometry("420x520") 
         self.root.resizable(False, False)
 
         # store the functions passed from main.py
@@ -52,6 +53,19 @@ class FanControllerUI:
         self.apply_btn.pack(pady=(10, 0))
         self.apply_btn.state(['disabled'])
 
+        # divider for custom curve buttons
+        ttk.Separator(control_group, orient='horizontal').pack(fill='x', pady=15)
+
+        default_fan_curve = ttk.Button(control_group, text="Restore Default Fan Curve", command=self.restore_default_curve)
+        default_fan_curve.pack(pady=(0, 10))
+
+        boost_fan_curve = ttk.Button(control_group, text="Boost Fan Curve", command=self.boost_fan_curve)
+        boost_fan_curve.pack(pady=(0, 0))
+
+        # status label for feedback messages (Now packed safely in the main frame)
+        self.status_label = ttk.Label(main_frame, text="", font=("Helvetica", 10, "bold"))
+        self.status_label.pack(pady=(15, 0))
+
     # event handlers for UI interactions
     def on_mode_change(self):
         current_mode = self.mode_var.get()
@@ -83,3 +97,29 @@ class FanControllerUI:
         self.temp_var.set(f"CPU Temp : {temp} °C")
         self.fan_pct_var.set(f"Fan Speed : {fan_pct} %")
         self.rpm_var.set(f"RPM : {rpm}")
+
+    # additional buttons for fan curve management
+    def restore_default_curve(self):
+        print("[UI] Restoring default fan curve...")
+        # CORRECTION : On met à jour l'UI visuellement sans déclencher de double commande réseau
+        self.mode_var.set("auto")
+        self.slider.state(['disabled'])
+        self.apply_btn.state(['disabled'])
+        
+        if self.mode_callback:
+            self.mode_callback("restore_default")
+    
+    def boost_fan_curve(self):
+        print("[UI] Boosting fan curve...")
+        if self.mode_callback:
+            self.mode_callback("boost_curve")
+
+    # methods to show temporary success or error messages
+    def show_success(self, message="✅ Done !"):
+        self.status_label.config(text=message, foreground="green")
+        # delete the message after 2 seconds
+        self.root.after(2000, lambda: self.status_label.config(text=""))
+        
+    def show_error(self, message="❌ Error"):
+        self.status_label.config(text=message, foreground="red")
+        self.root.after(2000, lambda: self.status_label.config(text=""))
