@@ -147,7 +147,7 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 - [ ] **ui/ux overhaul:** upgrade from standard tkinter to something cleaner (like `customtkinter` for a native, modern look).
 
 ### phase 3: production (deployment)
-- [ ] **install.sh script:** automate `modprobe ec_sys` and socket permissions on the host system.
+- [ ] **install.sh script:** automate `modprobe ec_sys` / socket permissions on the host system / capture default values of the fans
 - [ ] **systemd service:** set up a daemon to run the C backend automatically on boot in the background with `root` privileges.
 
 ---
