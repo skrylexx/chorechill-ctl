@@ -81,7 +81,12 @@ According to the readings taken, here is the exact mapping of the machine:
 
 ---
 
-## 4. C Implementation (Basic Concept)
+## 4. Get EC Controler Address
+
+
+---
+
+## 5. C Implementation (Basic Concept)
 
 Interaction with these addresses is done via standard POSIX system calls.
 The file `/sys/kernel/debug/ec/ec0/io` is manipulated like a standard binary file.

@@ -3,19 +3,19 @@
 
 #include <stdint.h>
 
-// socket function
-int socket();
-
-// read functions
+// --- READ FUNCTIONS ---
 int read_cpu_temp();
 int read_fan_speed();
 int read_fan_speed_rpm();
 
-// set functions
-int set_fan_speed(uint8_t speed_percent);
+// --- SET FUNCTIONS ---
+// kept doe the future
+void set_fan_mode(int mode);
 
-// del functions
+// hack to override the EC's native fan curve
+void set_custom_fan_curve();
 
-// modify functions
+// test purposes
+void reset_default_fan_curve();
 
 #endif
