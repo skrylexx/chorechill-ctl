@@ -1,7 +1,7 @@
 #ifndef PROFILES_H
 #define PROFILES_H
 
-void set_fan_curve(const char *profile);
-void update_custom_fan_curve(const char *profile);
+// parse the payload string and apply it to the hardware
+void apply_profile_from_string(const char* payload);
 
 #endif

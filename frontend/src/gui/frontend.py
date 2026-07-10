@@ -6,7 +6,7 @@ class FanControllerUI:
         self.root = root
         self.root.title("Chore Chill")
         # Augmentation de la hauteur (520) et largeur (420) pour que le texte rentre largement
-        self.root.geometry("420x520") 
+        self.root.geometry("420x720") 
         self.root.resizable(False, False)
 
         # store the functions passed from main.py
