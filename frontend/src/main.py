@@ -30,16 +30,34 @@ def main():
             #print(f"[MAIN] Backend response: {response}")
             
             if not response.startswith("ERR"):
-                app.show_success("✅ Default parameters restored!")
+                app.show_success("✅ Default parameters applied!")
             else:
                 app.show_error("❌ Failed to contact backend")
 
-        elif mode_str == "boost_curve":
-            response = ipc.send_command("SET_BOOST")
+        elif mode_str == "silent_curve":
+            response = ipc.send_command("SET_SILENT")
             #print(f"[MAIN] Backend response: {response}")
 
             if not response.startswith("ERR"):
-                app.show_success("✅ Boost curve applied !") # make it dynamic in the future
+                app.show_success("✅ Silent curve applied !") # make it dynamic in the future
+            else:
+                app.show_error("❌ Failed to contact backend")
+        
+        elif mode_str == "restore_gaming" or mode_str == "auto":
+            response = ipc.send_command("SET_GAMING")
+            #print(f"[MAIN] Backend response: {response}")
+            
+            if not response.startswith("ERR"):
+                app.show_success("✅ Gaming parameters applied!")
+            else:
+                app.show_error("❌ Failed to contact backend")
+
+        elif mode_str == "custom_curve":
+            response = ipc.send_command("SET_CUSTOM")
+            #print(f"[MAIN] Backend response: {response}")
+
+            if not response.startswith("ERR"):
+                app.show_success("✅ Custom curve applied !") # make it dynamic in the future
             else:
                 app.show_error("❌ Failed to contact backend")
 
