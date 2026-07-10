@@ -120,6 +120,8 @@ void set_custom_fan_curve() {
 // for test purposes
 // restore the factory fan curve in the EC memory
 void reset_default_fan_curve() {
+
+    char done_msg[256];
     uint8_t default_speeds[] = {38, 43, 48, 54, 60, 70, 85};
     
     int index = 0;

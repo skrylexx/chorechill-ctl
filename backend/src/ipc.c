@@ -8,6 +8,7 @@
 #include <fcntl.h> // required to use fcntl() for non-blocking socket
 #include <errno.h> // required to read the error type (EAGAIN)
 #include "../include/ipc.h"
+#include "../include/hardware.h"
 
 #define SOCKET_PATH "/tmp/chorechill-ctl.sock"
 
@@ -47,7 +48,7 @@ int init_ipc() {
     int flags = fcntl(sockfd, F_GETFL, 0);
     fcntl(sockfd, F_SETFL, flags | O_NONBLOCK);
 
-    printf("IPC Server started on %s (Mode Non-Bloquant)\n", SOCKET_PATH);
+    printf("IPC Server started on %s\n", SOCKET_PATH);
     return sockfd;
 }
 
@@ -69,7 +70,22 @@ void handle_ipc_client(int sockfd, int temp, int fan, int rpm) {
     // read the request from the client (even if we don't use it, it's a good practice to read it)
     char buffer[256];
     memset(buffer, 0, sizeof(buffer));
-    read(client_fd, buffer, sizeof(buffer) - 1); // On lit la requête (ex: "GET")
+
+    // read the command sent by the client
+    int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
+    
+    if (bytes_read > 0) {
+        // analyze the command received from the client
+        if (strncmp(buffer, "SET_DEFAULT", 11) == 0) {
+            printf("\n[IPC] Commande reçue : Restauration de la courbe d'usine.\n");
+            reset_default_fan_curve();
+            
+        } else if (strncmp(buffer, "SET_BOOST", 9) == 0) {
+            printf("\n[IPC] Commande reçue : Activation du profil Boost.\n");
+            set_custom_fan_curve();
+        } 
+        // if it's just a "GET", we don't do anything special, we go directly to the response
+    }
     
     // prepare the response string with the temperature, fan speed, and RPM values
     char response[256];
