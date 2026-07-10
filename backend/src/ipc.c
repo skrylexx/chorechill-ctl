@@ -7,6 +7,7 @@
 #include <sys/stat.h> // required for file permissions
 #include <fcntl.h> // required to use fcntl() for non-blocking socket
 #include <errno.h> // required to read the error type (EAGAIN)
+#include <cjson/cJSON.h> // requires libcjson-dev : sudo apt install libcjson-dev
 #include "../include/ipc.h"
 #include "../include/hardware.h"
 
@@ -75,22 +76,36 @@ void handle_ipc_client(int sockfd, int temp, int fan, int rpm) {
     int bytes_read = read(client_fd, buffer, sizeof(buffer) - 1);
     
     if (bytes_read > 0) {
-        // analyze the command received from the client
+        // analyze the profile asked by the client
         if (strncmp(buffer, "SET_DEFAULT", 11) == 0) {
             printf("\n[IPC] Commande reçue : Restauration de la courbe d'usine.\n");
-            reset_default_fan_curve();
-            
-        } else if (strncmp(buffer, "SET_BOOST", 9) == 0) {
-            printf("\n[IPC] Commande reçue : Activation du profil Boost.\n");
-            set_custom_fan_curve();
+            set_fan_curve("default");  
+        } else if (strncmp(buffer, "SET_SILENT", 10) == 0) {
+            printf("\n[IPC] Commande reçue : Activation du profil Silent.\n");
+            set_fan_curve("silent");
+        } else if (strncmp(buffer, "SET_GAMING", 10) == 0) {
+            printf("\n[IPC] Commande reçue : Activation du profil Gaming.\n");
+            set_fan_curve("gaming");
+        } else if (strncmp(buffer, "SET_CUSTOM", 10) == 0) {
+            printf("\n[IPC] Commande reçue : Activation du profil Custom.\n");
+            set_fan_curve("custom");
         } 
+
         // if it's just a "GET", we don't do anything special, we go directly to the response
     }
     
-    // prepare the response string with the temperature, fan speed, and RPM values
-    char response[256];
-    snprintf(response, sizeof(response), "%d,%d,%d", temp, fan, rpm);
-    write(client_fd, response, strlen(response));
+    // build the JSON response with telemetry data
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddNumberToObject(json, "temp", temp);
+    cJSON_AddNumberToObject(json, "fan", fan);
+    cJSON_AddNumberToObject(json, "rpm", rpm);
+
+    char *json_str = cJSON_PrintUnformatted(json);
+    if (json_str) {
+        write(client_fd, json_str, strlen(json_str));
+        free(json_str);
+    }
+    cJSON_Delete(json);
 
     close(client_fd);
 }

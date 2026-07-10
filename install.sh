@@ -24,3 +24,10 @@ else
 # py 
 echo "[INFO] Installing Python dependencies..."
 sudo apt-get install python3-tk 
+
+# c json
+# cJSON est utilisé dans backend/src/ipc.c pour sérialiser les données de télémétrie en JSON
+echo "[INFO] Installing cJSON (C JSON library)..."
+sudo apt-get install -y libcjson-dev
+# note : lors de la compilation, ajouter le flag "-lcjson" à la commande gcc/Makefile
+

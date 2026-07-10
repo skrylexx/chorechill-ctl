@@ -56,11 +56,17 @@ class FanControllerUI:
         # divider for custom curve buttons
         ttk.Separator(control_group, orient='horizontal').pack(fill='x', pady=15)
 
-        default_fan_curve = ttk.Button(control_group, text="Restore Default Fan Curve", command=self.restore_default_curve)
-        default_fan_curve.pack(pady=(0, 10))
+        default_fan_curve = ttk.Button(control_group, text="MSI Default Fan Curve", command=self.msi_default_curve)
+        default_fan_curve.pack(pady=(0, 30))
 
-        boost_fan_curve = ttk.Button(control_group, text="Boost Fan Curve", command=self.boost_fan_curve)
-        boost_fan_curve.pack(pady=(0, 0))
+        silent_fan_curve = ttk.Button(control_group, text="Silent Fan Curve", command=self.silent_fan_curve)
+        silent_fan_curve.pack(pady=(0, 20))
+
+        gaming_fan_curve = ttk.Button(control_group, text="Gaming Fan Curve", command=self.gaming_fan_curve)
+        gaming_fan_curve.pack(pady=(0, 10))
+
+        custom_fan_curve = ttk.Button(control_group, text="Custom Fan Curve", command=self.custom_fan_curve)
+        custom_fan_curve.pack(pady=(0, 0))
 
         # status label for feedback messages (Now packed safely in the main frame)
         self.status_label = ttk.Label(main_frame, text="", font=("Helvetica", 10, "bold"))
@@ -98,8 +104,8 @@ class FanControllerUI:
         self.fan_pct_var.set(f"Fan Speed : {fan_pct} %")
         self.rpm_var.set(f"RPM : {rpm}")
 
-    # additional buttons for fan curve management
-    def restore_default_curve(self):
+    # buttons for fan curve management
+    def msi_default_curve(self):
         print("[UI] Restoring default fan curve...")
         # CORRECTION : On met à jour l'UI visuellement sans déclencher de double commande réseau
         self.mode_var.set("auto")
@@ -109,10 +115,20 @@ class FanControllerUI:
         if self.mode_callback:
             self.mode_callback("restore_default")
     
-    def boost_fan_curve(self):
-        print("[UI] Boosting fan curve...")
+    def silent_fan_curve(self):
+        print("[UI] Setting silent fan curve...")
         if self.mode_callback:
-            self.mode_callback("boost_curve")
+            self.mode_callback("silent_curve")
+    
+    def gaming_fan_curve(self):
+        print("[UI] Setting gaming fan curve...")
+        if self.mode_callback:
+            self.mode_callback("gaming_curve")
+
+    def custom_fan_curve(self):
+        print("[UI] Setting custom fan curve...")
+        if self.mode_callback:
+            self.mode_callback("custom_curve")
 
     # methods to show temporary success or error messages
     def show_success(self, message="✅ Done !"):

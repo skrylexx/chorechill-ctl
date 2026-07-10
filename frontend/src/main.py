@@ -43,7 +43,7 @@ def main():
             else:
                 app.show_error("❌ Failed to contact backend")
         
-        elif mode_str == "restore_gaming" or mode_str == "auto":
+        elif mode_str == "gaming_curve" or mode_str == "auto":
             response = ipc.send_command("SET_GAMING")
             #print(f"[MAIN] Backend response: {response}")
             

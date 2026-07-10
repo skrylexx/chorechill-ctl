@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include "../include/hardware.h"
 
+// include json parser for fan curve management
+
 // base definitions for the Embedded Controller
 #define EC_FILE "/sys/kernel/debug/ec/ec0/io"
 #define ADDR_CPU_TEMP 0x68
@@ -107,26 +109,13 @@ void set_fan_mode(int mode) {
     write_ec_byte(0xF4, mode); // to update later with smth like "fanmode.json"
 }
 
+// set selected fan curve in the EC memory, based on the profile name provided
 
-// overwrite the factory fan curve in the EC memory
-void set_custom_fan_curve() {
+void set_fan_curve(const char *profile) {
+
     // addresses 0x72 to 0x78 hold the 7 fan speed percentages for each temperature step.
-    // we overwrite all of them with 80% to lock the fan speed cleanly.
+    uint8_t speeds[] = json_get_fan_curve(profile);
     for (int addr = 0x72; addr <= 0x78; addr++) {
-        write_ec_byte(addr, 80); 
-    }
-}
-
-// for test purposes
-// restore the factory fan curve in the EC memory
-void reset_default_fan_curve() {
-
-    char done_msg[256];
-    uint8_t default_speeds[] = {38, 43, 48, 54, 60, 70, 85};
-    
-    int index = 0;
-    for (int addr = 0x72; addr <= 0x78; addr++) {
-        write_ec_byte(addr, default_speeds[index]);
-        index++;
+        write_ec_byte(addr, speeds[addr - 0x72]); 
     }
 }
