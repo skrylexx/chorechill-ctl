@@ -6,13 +6,13 @@
 
 ## Table of Contents
 
-1. [Prerequisites — Kernel Lockdown](#1-prerequisites--kernel-lockdown)
+1. [Prerequisites : Kernel Lockdown](#1-prerequisites--kernel-lockdown)
 2. [Enabling the `ec_sys` Module](#2-enabling-the-ec_sys-module)
 3. [Taking Snapshots of EC Memory](#3-taking-snapshots-of-ec-memory)
 4. [Generating a Real Load](#4-generating-a-real-load)
 5. [Finding the Addresses by Diffing](#5-finding-the-addresses-by-diffing)
 6. [Identifying Temperature vs. Fan Registers](#6-identifying-temperature-vs-fan-registers)
-7. [Validated Addresses — MSI GF63 Thin](#7-validated-addresses--msi-gf63-thin)
+7. [Validated Addresses : MSI GF63 Thin](#7-validated-addresses--msi-gf63-thin)
 8. [Reading and Writing from C](#8-reading-and-writing-from-c)
 
 ---
@@ -29,9 +29,9 @@ cat /sys/kernel/security/lockdown
 
 | Output | Meaning |
 |---|---|
-| `[none] integrity confidentiality` | [OK] Unlocked — you can proceed |
-| `none [integrity] confidentiality` | [LOCKED] — disable Secure Boot |
-| `none integrity [confidentiality]` | [LOCKED] — disable Secure Boot |
+| `[none] integrity confidentiality` | [OK] Unlocked, you can proceed |
+| `none [integrity] confidentiality` | [LOCKED], disable Secure Boot |
+| `none integrity [confidentiality]` | [LOCKED], disable Secure Boot |
 
 **If locked:** reboot, enter your BIOS/UEFI (usually `Del`, `F2`, or `F10` at POST), find the **Secure Boot** setting and set it to **Disabled**. Save and reboot.
 
@@ -104,9 +104,9 @@ To find the value at a specific address, count columns from left. Address `0x68`
 ### Take your baseline snapshot
 
 ```bash
-# let the machine sit idle for 2–3 minutes, fans at minimum
+# let the machine sit idle for 2-3 minutes, fans at minimum
 sudo hexdump -C /sys/kernel/debug/ec/ec0/io > idle.txt
-cat idle.txt  # inspect it — note down values that look like temperatures (30–90 range)
+cat idle.txt  # inspect it - note down values that look like temperatures (30–90 range)
 ```
 
 ---
@@ -115,7 +115,7 @@ cat idle.txt  # inspect it — note down values that look like temperatures (30�
 
 You need the CPU hot enough that the fans visibly spin up. A few reliable methods:
 
-### Option A — `stress-ng` (recommended, available on most distros)
+### Option A - `stress-ng` (recommended, available on most distros)
 
 ```bash
 # install
@@ -125,14 +125,14 @@ sudo apt install stress-ng
 stress-ng --cpu 0 --timeout 60s
 ```
 
-### Option B — `prime95` via `mprime`
+### Option B - `prime95` via `mprime`
 
 ```bash
 # run torture test
 mprime -t
 ```
 
-### Option C — Compilation (no extra tools needed)
+### Option C - Compilation (no extra tools needed)
 
 ```bash
 # clone and build a large project, e.g. the Linux kernel itself
@@ -226,7 +226,7 @@ sudo hexdump -C /sys/kernel/debug/ec/ec0/io | grep -E "50 50|1e 1e"
 
 ---
 
-## 7. Validated Addresses — MSI GF63 Thin
+## 7. Validated Addresses - MSI GF63 Thin
 
 These addresses were confirmed by differential analysis and direct write tests.
 
@@ -252,7 +252,7 @@ These addresses were confirmed by differential analysis and direct write tests.
 | Fan speed steps | `0x72` → `0x78` | 7 bytes — % values (e.g. `38, 43, 48, 54, 60, 70, 85`) |
 | Fan mode control | `0xF4` | 1 byte — EC control mode flag |
 
-> **How the curve works:** The EC reads the temperature thresholds every cycle. When CPU temp crosses threshold T[i], it ramps the fan toward speed S[i+1]. There are 6 thresholds and 7 speeds — the first speed (S[0]) applies below T[0], and the last (S[6]) applies above T[5].
+> **How the curve works:** The EC reads the temperature thresholds every cycle. When CPU temp crosses threshold T[i], it ramps the fan toward speed S[i+1]. There are 6 thresholds and 7 speeds - the first speed (S[0]) applies below T[0], and the last (S[6]) applies above T[5].
 
 > **Note on direct writes:** Writing to `0x71` forces an immediate fan speed, but the EC overrides it within a few seconds. To hold a manual speed, the daemon must re-write every ~100 ms. Writing the curve to `0x6A–0x78` programs the EC itself, which then enforces the curve autonomously.
 
@@ -260,7 +260,7 @@ These addresses were confirmed by differential analysis and direct write tests.
 
 ## 8. Reading and Writing from C
 
-Interaction uses standard POSIX system calls — `/sys/kernel/debug/ec/ec0/io` is treated as a binary file.
+Interaction uses standard POSIX system calls - `/sys/kernel/debug/ec/ec0/io` is treated as a binary file.
 
 ```c
 #include <fcntl.h>
