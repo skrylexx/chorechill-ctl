@@ -39,7 +39,7 @@ def _sep(parent):
 class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
-        self.root.title("chore chill")
+        self.root.title("Chore Chill")
         self.root.geometry("640x310")
         self.root.resizable(False, False)
         self.root.configure(fg_color=BG)
@@ -77,7 +77,7 @@ class FanControllerUI:
         bar.pack_propagate(False)
 
         ctk.CTkLabel(
-            bar, text="chore chill",
+            bar, text="Chore Chill - Fan Controller",
             font=FONT_TITLE, text_color=TEXT
         ).pack(side="left", pady=12)
 

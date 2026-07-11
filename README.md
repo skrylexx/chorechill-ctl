@@ -153,7 +153,7 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 ## Compatibility
 
-> v0 targets the **MSI GF63 Thin** specifically (or machines with the same motherboard).  
+> v1 targets the **MSI GF63 Thin** specifically (or machines with the same motherboard).  
 > EC register layout varies by manufacturer and model.
 
 ---
