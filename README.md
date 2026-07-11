@@ -10,30 +10,49 @@ Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/deb
 
 ```
 chorechill-ctl/
-├── install.sh                 # Deployment & module setup script
-├── Makefile                   # C build automation
-├── README.md                  # You are here
-├── How2Get_Good_Addresses.md  # EC investigation guide (hexdump method)
-├── config/                    # .json file containing default EC curve values and user's custom profile
-├── backend/                   # C daemon
+├── install.sh                      # Deployment & module setup script (run as root)
+├── Makefile                        # C build automation
+├── README.md                       # You are here
+├── How2Get_Good_Addresses.md       # EC investigation guide (hexdump method)
+├── config/
+│   ├── profiles.json               # Fan curve profiles (default, silent, gaming, custom)
+│   └── chorechill-ctl.service      # Systemd unit file (reference copy)
+├── backend/                        # C daemon (runs as root, talks to EC)
 │   ├── include/
-│   │   ├── hardware.h         # Signatures for EC I/O (/sys/kernel/debug/ec/ec0/io)
-│   │   ├── controller.h       # Signatures for thermal logic
-│   │   └── ipc.h              # Signatures for UNIX socket IPC
+│   │   ├── hardware.h              # Signatures for EC I/O (/sys/kernel/debug/ec/ec0/io)
+│   │   ├── ipc.h                   # Signatures for UNIX socket IPC
+│   │   └── profiles.h              # Signatures for profile parsing
+│   ├── compiled/                   # Output directory for built binaries
 │   └── src/
-│       ├── main.c             # Entrypoint (handles SIGINT)
-│       ├── hardware.c         # Reads CPU temp / writes fan speed via EC
-│       ├── controller.c       # Thermal curve logic
-│       └── ipc.c              # UNIX socket server, talks to GUI
-└── frontend/                  # Python GUI
-    ├── requirements.txt       # Dependencies
+│       ├── main.c                  # Entrypoint : main loop + SIGINT/SIGTERM handler
+│       ├── hardware.c              # Reads CPU temp / writes fan speed via EC
+│       ├── ipc.c                   # UNIX socket server, routes commands to hardware/profiles
+│       └── profiles.c              # Parses SET_CURVE payload and writes curve to EC
+└── frontend/                       # Python GUI (runs as regular user)
+    ├── requirements.txt            # Python dependencies
     └── src/
-        ├── main.py            # Entrypoint
+        ├── main.py                 # Entrypoint : wires IPC + UI + telemetry polling
         ├── gui/
-        │   ├── app_window.py  # Main window
-        │   └── graph.py       # Fan curve graph
-        └── ipc_client.py      # UNIX socket client, talks to C daemon
+        │   └── frontend.py         # Main window + CustomCurveEditor popup (customtkinter)
+        └── ipc/
+            └── main.py             # UNIX socket client : talks to C daemon
 ```
+
+---
+
+## IPC Protocol
+
+The frontend and daemon communicate over a UNIX socket at `/tmp/chorechill-ctl.sock`.
+
+| Command | Direction | Description |
+|---|---|---|
+| `GET` | frontend → daemon | Poll current telemetry |
+| `SET:<pct>` | frontend → daemon | Lock fan at `<pct>`% — daemon keeps re-writing every 100 ms to hold the EC |
+| `SET_CURVE:<t1,...,t6>;<s1,...,s7>` | frontend → daemon | Push a fan curve into EC registers; EC runs it autonomously, re-write loop stops |
+
+All commands return `<temp_c>,<fan_pct>,<rpm>` as the response.
+
+> **Why the re-write loop?** The EC has its own thermal algorithm. Writing once to the fan speed register (`0x71`) only works for a few seconds — the EC overrides it. The daemon re-writes every 100 ms to hold manual mode. `SET_CURVE` writes to the curve registers (`0x6A–0x78`) which the EC enforces autonomously, so no re-write is needed.
 
 ---
 
@@ -47,15 +66,15 @@ chorechill-ctl/
 Verify Secure Boot / lockdown status:
 ```bash
 cat /sys/kernel/security/lockdown
-# [none]  → OK
-# [integrity] or [confidentiality] → disable Secure Boot in BIOS first
+# [none]  --> OK
+# [integrity] or [confidentiality] --> disable Secure Boot in BIOS first
 ```
 
 ---
 
 ## Setup
 
-Run the install script (sets up `ec_sys` with write support permanently and installs Python deps):
+Run the install script (sets up `ec_sys` with write support permanently, installs deps, and registers the systemd service):
 
 ```bash
 sudo bash install.sh
@@ -66,7 +85,9 @@ What it does:
 2. Configures `ec_sys` with `write_support=1` persistently via `/etc/modprobe.d/`
 3. Forces `ec_sys` to load at every boot via `/etc/modules-load.d/`
 4. Loads the module immediately
-5. Installs `python3-tk`
+5. Installs `python3-tk` and `libcjson-dev`
+6. Saves a hexdump of EC defaults to `/etc/chorechill-ctl/ec_defaults.hex`
+7. Installs and enables the systemd service
 
 ---
 
@@ -74,17 +95,23 @@ What it does:
 
 ```bash
 # Build the daemon
-gcc backend/src/main.c backend/src/hardware.c backend/src/ipc.c -o compiled/v0
+make
 
-# Load the EC module with write support (required to write fan speed)
+# (optional) load the EC module manually if not done by install.sh
 sudo modprobe -r ec_sys || true
 sudo modprobe ec_sys write_support=1
 
-# Mount debugfs if not already mounted
-sudo mount -t debugfs none /sys/kernel/debug
+# Start the daemon (or let systemd handle it)
+sudo ./backend/compiled/chorechill-ctl
 
-# Run the daemon
-sudo ./compiled/v0
+# In another terminal, start the GUI
+cd frontend/src && python3 main.py
+```
+
+Via systemd (after install.sh):
+```bash
+sudo systemctl start chorechill-ctl
+sudo systemctl status chorechill-ctl
 ```
 
 ---
@@ -115,14 +142,15 @@ Bytes that increase with heat → temperature registers.
 ### Validated addresses (MSI GF63 Thin)
 
 | Component       | Address | Access     | Example values              |
-|-----------------|---------|------------|-----------------------------|
+|-----------------|---------|------------|------------------------------|
 | CPU Temperature | `0x68`  | Read       | `0x36` (54°C) → `0x59` (89°C) |
 | CPU Fan Speed   | `0x71`  | Read/Write | `0x2b` (43%) → `0x64` (100%)  |
+| Fan Curve Temps | `0x6A–0x6F` | Write  | 6 temperature thresholds (°C) |
+| Fan Curve Speeds| `0x72–0x78` | Write  | 7 speed percentages (%)       |
 | GPU Temperature | `0x80`  | Read       | `0x00` (standby)            |
 | GPU Fan Speed   | `0x89`  | Read/Write | `0x00` (off)                |
 
-> **Note:** To force 100% fan speed, write `0x64` (hex) to `0x71`.  
-> The EC has its own control loop — the daemon must keep writing the setpoint in a loop or the EC will reclaim control and apply its own thermal curve.
+> **Note:** The EC has its own control loop — writing a curve to `0x6A–0x78` makes the EC enforce it automatically. For a manual lock (`SET:<pct>`), the daemon writes directly to `0x71`.
 
 For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Addresses.md).
 
@@ -132,23 +160,6 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 > v0 targets the **MSI GF63 Thin** specifically (or machines with the same motherboard).  
 > EC register layout varies by manufacturer and model.
-
----
-
-## Roadmap
-
-### phase 1: closing the loop (backend logic)
-- [ ] **parse python commands:** update C backend to read "SET:XX", extract the value, and trigger `set_fan_speed(X)`.
-- [ ] **create controller.c (the brain):** maintain the targeted fan speed at each loop iteration so the hardware EC doesn't override the custom value.
-- [ ] **static profiles:** implement hardcoded modes in C (e.g., if mode == silent -> lock at 30%, if mode == gaming -> lock at 85%).
-
-### phase 2: advanced dashboard (frontend)
-- [ ] **custom fan curves:** build a GUI graph where the user can set custom speed % for specific temperature thresholds. send this data array to the C backend.
-- [ ] **ui/ux overhaul:** upgrade from standard tkinter to something cleaner (like `customtkinter` for a native, modern look).
-
-### phase 3: production (deployment)
-- [ ] **install.sh script:** automate `modprobe ec_sys` / socket permissions on the host system / capture default values of the fans
-- [ ] **systemd service:** set up a daemon to run the C backend automatically on boot in the background with `root` privileges.
 
 ---
 

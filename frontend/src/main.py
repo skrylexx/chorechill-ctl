@@ -1,5 +1,4 @@
-import tkinter as tk
-from tkinter import ttk
+import customtkinter as ctk
 import json
 import os
 
@@ -8,58 +7,53 @@ from gui.frontend import FanControllerUI
 from ipc.main import IPCClient
 
 def main():
-    root = tk.Tk()
-    style = ttk.Style()
-    if "clam" in style.theme_names():
-        style.theme_use("clam")
+    root = ctk.CTk()
 
     ipc = IPCClient()
 
     def apply_profile(profile_key):
         config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "config", "profiles.json"))
-        
+
         try:
             with open(config_path, "r") as f:
                 data = json.load(f)
-                
+
             if profile_key in data["profiles"]:
                 profile = data["profiles"][profile_key]
-                
-                temps_str = ",".join(map(str, profile["temperatures_c"]))
+
+                temps_str  = ",".join(map(str, profile["temperatures_c"]))
                 speeds_str = ",".join(map(str, profile["speeds_percent"]))
-                
+
                 payload = f"SET_CURVE:{temps_str};{speeds_str}"
-                
+
                 print(f"[MAIN] Sending to backend : {payload}")
                 return ipc.send_command(payload)
             else:
                 print(f"[MAIN] Error: Profile '{profile_key}' not found in JSON.")
                 return "ERR: Profile not found"
-                
+
         except Exception as e:
             print(f"[MAIN] Error reading JSON: {e}")
             return "ERR: JSON read error"
 
-
     def handle_mode(mode_str):
         print(f"[MAIN] Action requested: {mode_str}")
-        
-        # Dictionnaire qui traduit l'action de l'UI vers la clé exacte du fichier JSON
+
+        # map UI action strings to the exact profile key used in profiles.json
         json_key_map = {
             "restore_default": "default",
-            "auto": "default",
-            "silent_curve": "silent",
-            "gaming_curve": "gaming",
-            "custom_curve": "custom"
+            "auto":            "default",
+            "silent_curve":    "silent",
+            "gaming_curve":    "gaming",
+            "custom_curve":    "custom"
         }
-        
+
         if mode_str in json_key_map:
             profile_name = json_key_map[mode_str]
-            
             response = apply_profile(profile_name)
-            
+
             if not response.startswith("ERR"):
-                app.show_success(f"Profile '{profile_name}' applied !")
+                app.show_success(f"Profile '{profile_name}' applied!")
             else:
                 app.show_error("Backend error")
         else:
@@ -67,7 +61,11 @@ def main():
 
     def handle_apply(speed):
         print(f"[MAIN] Forcing fan speed to {speed}%")
-        ipc.send_command(f"SET:{speed}")
+        response = ipc.send_command(f"SET:{speed}")
+        if not response.startswith("ERR"):
+            app.show_success(f"Fan locked at {speed}%")
+        else:
+            app.show_error("Backend error")
 
     app = FanControllerUI(root, apply_callback=handle_apply, mode_callback=handle_mode)
 
@@ -80,9 +78,13 @@ def main():
                     app.update_telemetry(data[0], data[1], data[2])
             except Exception:
                 pass
+        elif "BACKEND_OFFLINE" in response:
+            app.update_telemetry("offline", "--", "--")
+        elif "TIMEOUT" in response:
+            app.update_telemetry("timeout", "--", "--")
         else:
             app.update_telemetry("--", "--", "--")
-            
+
         root.after(1000, poll_telemetry)
 
     poll_telemetry()

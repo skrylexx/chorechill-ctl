@@ -1,2 +1,10 @@
+# compiled binaries
 backend/compiled/*
+
+# editor
 .vscode/
+
+# python cache
+**/__pycache__/
+*.pyc
+*.pyo

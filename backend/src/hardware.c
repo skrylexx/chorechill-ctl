@@ -33,9 +33,9 @@ static int read_ec_word(off_t address) {
     uint8_t bytes[2];
     if (read(fd, bytes, 2) != 2) { close(fd); return -1; }
 
-    int valeur_brute = (bytes[0] << 8) | bytes[1];
+    int raw_value = (bytes[0] << 8) | bytes[1];
     close(fd);
-    return valeur_brute;
+    return raw_value;
 }
 
 static int write_ec_byte(off_t address, uint8_t value) {
@@ -66,6 +66,14 @@ int read_fan_speed_rpm() {
 
 void set_fan_mode(int mode) {
     write_ec_byte(0xF4, mode); 
+}
+
+// lock the fan at a fixed percentage (0–100) by writing directly to the EC register
+void set_fan_speed_percent(int percent) {
+    // clamp input, then convert to the EC's 0–100 scale (it already speaks percent)
+    if (percent < 0)   percent = 0;
+    if (percent > 100) percent = 100;
+    write_ec_byte(ADDR_FAN_SPEED, (uint8_t)percent);
 }
 
 // write the full arrays to the EC memory
