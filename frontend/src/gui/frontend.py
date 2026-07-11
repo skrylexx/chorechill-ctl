@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter as tk
 import json
 import os
 
@@ -13,10 +14,12 @@ SURFACE  = "#21222c"
 BORDER   = "#44475a"
 TEXT     = "#f8f8f2"
 SUBTEXT  = "#6272a4"
-ACCENT   = "#bd93f9"
+ACCENT   = "#bd93f9"   # purple line
 ACCENT_H = "#a87ff1"   # hover state
-SUCCESS  = "#50fa7b"
-DANGER   = "#ff5555"
+SUCCESS  = "#50fa7b"   # green (base speed point)
+DANGER   = "#ff5555"   # red (offline badge)
+CYAN     = "#8be9fd"   # cyan (drag/active highlight)
+ORANGE   = "#ffb86c"   # orange (threshold points)
 
 FONT_TITLE  = ("Helvetica", 15, "bold")
 FONT_LABEL  = ("Helvetica", 11, "bold")
@@ -37,14 +40,13 @@ class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
         self.root.title("chore chill")
-        self.root.geometry("740x450")
+        self.root.geometry("640x300")
         self.root.resizable(False, False)
         self.root.configure(fg_color=BG)
 
         # store the functions passed from main.py
         self.apply_callback = apply_callback
         self.mode_callback  = mode_callback
-        self.current_mode   = "auto"
 
         self._build_header()
         
@@ -52,7 +54,7 @@ class FanControllerUI:
         self.main_container = ctk.CTkFrame(self.root, fg_color="transparent")
         self.main_container.pack(fill="both", expand=True, padx=20, pady=(10, 0))
 
-        # Left Column (Telemetry + Fan Control)
+        # Left Column (Telemetry + Configure Custom Mode)
         self.left_col = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.left_col.pack(side="left", fill="both", expand=True, padx=(0, 10))
 
@@ -127,65 +129,23 @@ class FanControllerUI:
         section.pack(fill="both", expand=True, pady=(0, 10))
 
         ctk.CTkLabel(section, text="FAN CONTROL",
-                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(16, 8))
+                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(12, 4))
 
-        # Auto / Manual toggle
-        self._seg = ctk.CTkSegmentedButton(
+        # Single button to configure the custom curve
+        self._config_btn = ctk.CTkButton(
             section,
-            values=["Auto", "Manual"],
-            command=self._on_mode_change,
-            font=FONT_BTN,
+            text="Configure Custom Mode",
+            command=self.custom_fan_curve,
             fg_color=BG,
-            selected_color=ACCENT,
-            selected_hover_color=ACCENT_H,
-            unselected_color=BG,
-            unselected_hover_color=BORDER,
+            hover_color=BORDER,
+            font=FONT_BTN,
             text_color=TEXT,
             corner_radius=8,
+            height=38,
             border_width=1,
+            border_color=BORDER,
         )
-        self._seg.set("Auto")
-        self._seg.pack(fill="x", padx=16, pady=(0, 10))
-
-        # slider
-        self._slider_var = ctk.IntVar(value=50)
-        self._slider = ctk.CTkSlider(
-            section,
-            from_=0, to=100,
-            variable=self._slider_var,
-            command=self._on_slider_move,
-            button_color=ACCENT,
-            button_hover_color=ACCENT_H,
-            progress_color=ACCENT,
-            fg_color=BG,
-            state="disabled",
-            height=16,
-            corner_radius=6,
-            button_corner_radius=6,
-        )
-        self._slider.pack(fill="x", padx=16)
-
-        self._slider_label = ctk.CTkLabel(
-            section, text="Target: 50%",
-            font=FONT_LABEL, text_color=SUBTEXT
-        )
-        self._slider_label.pack(pady=(2, 8))
-
-        # apply button
-        self._apply_btn = ctk.CTkButton(
-            section,
-            text="Apply Speed",
-            command=self._on_apply_click,
-            fg_color=ACCENT,
-            hover_color=ACCENT_H,
-            font=FONT_BTN,
-            state="disabled",
-            corner_radius=8,
-            height=36,
-            text_color=BG,               # dark text on light accent background
-            border_width=0,
-        )
-        self._apply_btn.pack(fill="x", padx=16, pady=(0, 16))
+        self._config_btn.pack(fill="x", padx=16, pady=(8, 16))
 
     def _build_profiles(self):
         section = ctk.CTkFrame(self.right_col, fg_color=SURFACE, corner_radius=10,
@@ -193,14 +153,13 @@ class FanControllerUI:
         section.pack(fill="both", expand=True, pady=(0, 10))
 
         ctk.CTkLabel(section, text="PROFILES",
-                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(16, 8))
+                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(12, 4))
 
         # each profile is a flat button, left-aligned text, consistent height
         profiles = [
             ("MSI Default", self.msi_default_curve),
-            ("Silent",      self.silent_fan_curve),
-            ("Gaming",      self.gaming_fan_curve),
-            ("Custom...",   self.custom_fan_curve),
+            ("Silent Mode", self.silent_fan_curve),
+            ("Gaming Mode", self.gaming_fan_curve),
         ]
 
         for text, cmd in profiles:
@@ -218,7 +177,7 @@ class FanControllerUI:
                 border_width=1,
                 border_color=BORDER,
             )
-            btn.pack(fill="x", padx=16, pady=(0, 8))
+            btn.pack(fill="x", padx=16, pady=(4, 4))
 
     def _build_status(self):
         # Stretched bottom bar for status
@@ -227,31 +186,6 @@ class FanControllerUI:
             font=FONT_STATUS, text_color=SUCCESS
         )
         self._status_label.pack(pady=(0, 10))
-
-    # ==========================================
-    # EVENT HANDLERS
-    # ==========================================
-
-    def _on_mode_change(self, value):
-        self.current_mode = "manual" if value == "Manual" else "auto"
-
-        if self.current_mode == "manual":
-            self._slider.configure(state="normal")
-            self._apply_btn.configure(state="normal")
-        else:
-            self._slider.configure(state="disabled")
-            self._apply_btn.configure(state="disabled")
-
-        # trigger external logic if provided
-        if self.mode_callback:
-            self.mode_callback(self.current_mode)
-
-    def _on_slider_move(self, value):
-        self._slider_label.configure(text=f"Target: {int(value)}%")
-
-    def _on_apply_click(self):
-        if self.apply_callback:
-            self.apply_callback(int(self._slider_var.get()))
 
     # ==========================================
     # PUBLIC API — called from main.py
@@ -284,10 +218,6 @@ class FanControllerUI:
 
     def msi_default_curve(self):
         print("[UI] Restoring default fan curve...")
-        # update the UI state directly without triggering a double network command
-        self._seg.set("Auto")
-        self._slider.configure(state="disabled")
-        self._apply_btn.configure(state="disabled")
         if self.mode_callback:
             self.mode_callback("restore_default")
 
@@ -320,92 +250,270 @@ CONFIG_PATH = os.path.abspath(
 )
 
 class CustomCurveEditor(ctk.CTkToplevel):
-    """Modal window to edit the 'custom' fan curve profile.
+    """Modal window to edit the 'custom' fan curve profile graphically.
 
-    Exposes 6 temperature entry fields and 7 speed entry fields.
+    Displays a canvas with 7 interactive draggable points.
+    Horizontal axis represents CPU temperature (25 to 95 C).
+    Vertical axis represents fan speed percentage (0 to 100 %).
     On save, writes back to profiles.json so the next apply_profile('custom') picks it up.
     """
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.title("Custom Curve")
-        self.geometry("520x360")
+        self.title("Configure Custom Mode")
+        self.geometry("800x520")
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.grab_set()
 
+        # Canvas & Plot size math (strictly fit within canvas width 760, height 370)
+        self.margin_left = 60
+        self.margin_right = 30
+        self.margin_top = 20
+        self.margin_bottom = 80
+        
+        self.canvas_w = 760
+        self.canvas_h = 370
+        
+        self.plot_w = self.canvas_w - self.margin_left - self.margin_right
+        self.plot_h = self.canvas_h - self.margin_top - self.margin_bottom
+
         defaults = self._load_custom_defaults()
 
-        # header
-        hdr = ctk.CTkFrame(self, fg_color="transparent", height=48)
-        hdr.pack(fill="x", padx=20)
-        hdr.pack_propagate(False)
-        ctk.CTkLabel(hdr, text="Custom Curve", font=FONT_TITLE, text_color=TEXT).pack(side="left", pady=14)
-        ctk.CTkLabel(hdr, text="6 temps · 7 speeds", font=FONT_LABEL, text_color=SUBTEXT).pack(side="right", pady=14)
+        # Build self.points (7 points) from defaults:
+        # P0 is fixed at temp=25 (start threshold), adjustable vertically (S0).
+        # P1..P6 correspond to temperatures_c[0..5] and speeds_percent[1..6].
+        # We ensure temperatures are loaded with 25 C minimum.
+        self.points = []
+        
+        # P0 starting speed S[0] (fixed X, adjustable Y)
+        self.points.append({"temp": 25, "speed": defaults["speeds_percent"][0], "fixed_x": True})
+        
+        # P1..P6 representing thresholds T[0..5] and speeds S[1..6] (adjustable X & Y)
+        for i in range(6):
+            t_val = max(26 + i, defaults["temperatures_c"][i])  # enforce strictly ascending above 25 C
+            self.points.append({
+                "temp": t_val,
+                "speed": defaults["speeds_percent"][i + 1],
+                "fixed_x": False
+            })
+
+        self.dragged_point_idx = None
+
+        # Build top bar layout
+        hdr_frame = ctk.CTkFrame(self, fg_color="transparent", height=60)
+        hdr_frame.pack(fill="x", padx=20, pady=(10, 0))
+        hdr_frame.pack_propagate(False)
+
+        ctk.CTkLabel(hdr_frame, text="Custom Curve Editor", font=FONT_TITLE, text_color=TEXT).pack(side="left")
+
+        # Top-right live recap label (displays real temperatures in C, and speeds in %)
+        self.recap_label = ctk.CTkLabel(
+            hdr_frame, text="",
+            font=("Helvetica", 11, "bold"),
+            text_color=SUBTEXT,
+            justify="right"
+        )
+        self.recap_label.pack(side="right")
 
         _sep(self)
 
-        body = ctk.CTkFrame(self, fg_color="transparent")
-        body.pack(fill="x", padx=20, pady=16)
+        # Build Canvas Area
+        self.canvas_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.canvas_frame.pack(fill="x", padx=20, pady=10)
 
-        # temperature row
-        ctk.CTkLabel(body, text="TEMPERATURE THRESHOLDS (C)",
-                     font=FONT_LABEL, text_color=SUBTEXT).grid(row=0, column=0, columnspan=6, sticky="w", pady=(0, 6))
+        self.canvas = ctk.CTkCanvas(
+            self.canvas_frame,
+            width=self.canvas_w,
+            height=self.canvas_h,
+            bg=BG,
+            highlightthickness=0
+        )
+        self.canvas.pack()
 
-        self._temp_vars = []
-        for i, val in enumerate(defaults["temperatures_c"]):
-            inner = ctk.CTkFrame(body, fg_color=SURFACE, corner_radius=8,
-                                 border_width=1, border_color=BORDER)
-            inner.grid(row=1, column=i, padx=(0, 6), sticky="ew")
-            body.columnconfigure(i, weight=1)
-            ctk.CTkLabel(inner, text=f"T{i+1}", font=FONT_LABEL, text_color=SUBTEXT).pack(pady=(6, 0))
-            var = ctk.StringVar(value=str(val))
-            ctk.CTkEntry(inner, textvariable=var, width=46,
-                         font=("Helvetica", 13, "bold"), justify="center",
-                         fg_color="transparent", border_width=0,
-                         text_color=TEXT).pack(pady=(0, 6))
-            self._temp_vars.append(var)
-
-        # speed row
-        ctk.CTkLabel(body, text="FAN SPEEDS (%)",
-                     font=FONT_LABEL, text_color=SUBTEXT).grid(row=2, column=0, columnspan=7, sticky="w", pady=(14, 6))
-
-        speed_frame = ctk.CTkFrame(body, fg_color="transparent")
-        speed_frame.grid(row=3, column=0, columnspan=7, sticky="ew")
-
-        self._speed_vars = []
-        for i, val in enumerate(defaults["speeds_percent"]):
-            inner = ctk.CTkFrame(speed_frame, fg_color=SURFACE, corner_radius=8,
-                                 border_width=1, border_color=BORDER)
-            inner.grid(row=0, column=i, padx=(0, 6), sticky="ew")
-            speed_frame.columnconfigure(i, weight=1)
-            ctk.CTkLabel(inner, text=f"S{i+1}", font=FONT_LABEL, text_color=SUBTEXT).pack(pady=(6, 0))
-            var = ctk.StringVar(value=str(val))
-            ctk.CTkEntry(inner, textvariable=var, width=40,
-                         font=("Helvetica", 13, "bold"), justify="center",
-                         fg_color="transparent", border_width=0,
-                         text_color=TEXT).pack(pady=(0, 6))
-            self._speed_vars.append(var)
+        self.canvas.bind("<Button-1>", self._on_canvas_click)
+        self.canvas.bind("<B1-Motion>", self._on_canvas_drag)
+        self.canvas.bind("<ButtonRelease-1>", self._on_canvas_release)
 
         _sep(self)
 
-        # footer: status + buttons
-        footer = ctk.CTkFrame(self, fg_color="transparent")
-        footer.pack(fill="x", padx=20, pady=12)
+        # Footer Area (even larger buttons as requested: height 42)
+        footer = ctk.CTkFrame(self, fg_color="transparent", height=50)
+        footer.pack(fill="x", padx=20, pady=(5, 10))
+        footer.pack_propagate(False)
 
         self._status = ctk.CTkLabel(footer, text="", font=FONT_LABEL, text_color=SUBTEXT)
-        self._status.pack(side="left")
+        self._status.pack(side="left", pady=10)
 
         ctk.CTkButton(footer, text="Cancel", command=self.destroy,
                       fg_color=SURFACE, hover_color=BORDER,
                       text_color=TEXT, font=FONT_BTN,
-                      width=90, height=34, corner_radius=8,
-                      border_width=1, border_color=BORDER).pack(side="right", padx=(6, 0))
+                      width=120, height=42, corner_radius=8,
+                      border_width=1, border_color=BORDER).pack(side="right", padx=(6, 0), pady=4)
 
         ctk.CTkButton(footer, text="Save & Apply", command=self._on_save,
                       fg_color=ACCENT, hover_color=ACCENT_H,
-                      text_color=BG, font=FONT_BTN,           # dark text on light accent background
-                      width=110, height=34, corner_radius=8).pack(side="right")
+                      text_color=BG, font=FONT_BTN,
+                      width=150, height=42, corner_radius=8).pack(side="right", pady=4)
+
+        self._update_recap()
+        self._draw_graph()
+
+    def _temp_to_x(self, temp):
+        # Range is 25 C to 95 C (width of 70 degrees)
+        return self.margin_left + ((temp - 25) / 70.0) * self.plot_w
+
+    def _speed_to_y(self, speed):
+        return self.margin_top + (1.0 - speed / 100.0) * self.plot_h
+
+    def _x_to_temp(self, x):
+        val = 25.0 + ((x - self.margin_left) / float(self.plot_w)) * 70.0
+        return max(25.0, min(95.0, val))
+
+    def _y_to_speed(self, y):
+        val = (1.0 - (y - self.margin_top) / float(self.plot_h)) * 100.0
+        return max(0.0, min(100.0, val))
+
+    def _update_recap(self):
+        # Format the selected coordinates dynamically using real decimal values (with °C and %)
+        temps_str = ", ".join(f"{p['temp']}°C" for p in self.points[1:])
+        speeds_str = ", ".join(f"{p['speed']}%" for p in self.points)
+        self.recap_label.configure(
+            text=f"Temps:  {temps_str}\nSpeeds: {speeds_str}"
+        )
+
+    def _draw_graph(self):
+        self.canvas.delete("all")
+
+        # Draw grid & axes
+        # Y-Axis grid lines & ticks (Speed)
+        for s in [0, 20, 40, 60, 80, 100]:
+            y = self._speed_to_y(s)
+            self.canvas.create_line(self.margin_left, y, self.margin_left + self.plot_w, y, fill=BORDER, dash=(2, 2))
+            self.canvas.create_text(self.margin_left - 18, y, text=f"{s}%", fill=SUBTEXT, font=("Helvetica", 9))
+
+        # X-Axis grid lines & ticks (Temperature starting at 25 C)
+        for t in [25, 40, 55, 70, 85, 95]:
+            x = self._temp_to_x(t)
+            self.canvas.create_line(x, self.margin_top, x, self.margin_top + self.plot_h, fill=BORDER, dash=(2, 2))
+            self.canvas.create_text(x, self.margin_top + self.plot_h + 15, text=f"{t}°C", fill=SUBTEXT, font=("Helvetica", 9))
+
+        # Draw main axis lines
+        self.canvas.create_line(self.margin_left, self.margin_top, self.margin_left, self.margin_top + self.plot_h, fill=BORDER)
+        self.canvas.create_line(self.margin_left, self.margin_top + self.plot_h, self.margin_left + self.plot_w, self.margin_top + self.plot_h, fill=BORDER)
+
+        # Plot coordinates
+        coords = []
+        for p in self.points:
+            coords.append((self._temp_to_x(p["temp"]), self._speed_to_y(p["speed"])))
+
+        # 1. Polish: Draw glowing area under the curve (more transparent, very close to BG #282a36)
+        poly_coords = []
+        poly_coords.append(self.margin_left)
+        poly_coords.append(self.margin_top + self.plot_h)
+        for cx, cy in coords:
+            poly_coords.append(cx)
+            poly_coords.append(cy)
+        poly_coords.append(coords[-1][0])
+        poly_coords.append(self.margin_top + self.plot_h)
+        # Soft dark violet fill that is highly transparent/muted
+        self.canvas.create_polygon(poly_coords, fill="#2e2a3c", outline="")
+
+        # 2. Polish: Draw thin vertical dashed projection lines down to the X-axis for each point
+        for idx, p in enumerate(self.points):
+            x = self._temp_to_x(p["temp"])
+            y = self._speed_to_y(p["speed"])
+            
+            # Dashed line from point down to X-axis
+            self.canvas.create_line(x, y, x, self.margin_top + self.plot_h, fill=BORDER, dash=(2, 2))
+
+            # Display a floating coordinate tooltip above the active dragged point
+            if idx == self.dragged_point_idx:
+                self.canvas.create_text(
+                    x, y - 20,
+                    text=f"{p['temp']}°C, {p['speed']}%",
+                    fill=CYAN,
+                    font=("Helvetica", 10, "bold")
+                )
+
+        # 3. Polish: Draw the main curve line (thinner 2px line for a sharper/cleaner look)
+        for i in range(1, len(coords)):
+            self.canvas.create_line(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1], fill=ACCENT, width=2)
+
+        # 4. Polish: Draw points with clean circular joints and high-contrast outer rings
+        # Color coding: S0 baseline is Green (SUCCESS), Thresholds T0-T5 are Orange (ORANGE)
+        for idx, p in enumerate(self.points):
+            x = self._temp_to_x(p["temp"])
+            y = self._speed_to_y(p["speed"])
+            
+            # Determine color (active point glows in Cyan)
+            if idx == self.dragged_point_idx:
+                color = CYAN
+            elif idx == 0:
+                color = SUCCESS  # base speed point is green
+            else:
+                color = ORANGE   # threshold points are orange
+                
+            r_outer = 7
+            r_inner = 4
+            
+            # Outer ring
+            self.canvas.create_oval(x - r_outer, y - r_outer, x + r_outer, y + r_outer, fill=BORDER, outline="")
+            # Inner circle
+            self.canvas.create_oval(x - r_inner, y - r_inner, x + r_inner, y + r_inner, fill=color, outline="")
+
+        # 5. English Legend at the bottom center of the canvas area
+        legend_y = self.margin_top + self.plot_h + 45
+        
+        # P0 Green Indicator
+        self.canvas.create_oval(210 - 5, legend_y - 5, 210 + 5, legend_y + 5, fill=SUCCESS, outline="")
+        self.canvas.create_text(224, legend_y, text="Base Fan Speed", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
+        
+        # P1..P6 Orange Indicator
+        self.canvas.create_oval(440 - 5, legend_y - 5, 440 + 5, legend_y + 5, fill=ORANGE, outline="")
+        self.canvas.create_text(454, legend_y, text="Temperature Threshold", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
+
+    def _on_canvas_click(self, event):
+        # Find closest point
+        closest_idx = None
+        min_dist = 15.0  # threshold radius in pixels
+        for idx, p in enumerate(self.points):
+            px = self._temp_to_x(p["temp"])
+            py = self._speed_to_y(p["speed"])
+            dist = ((px - event.x) ** 2 + (py - event.y) ** 2) ** 0.5
+            if dist < min_dist:
+                min_dist = dist
+                closest_idx = idx
+
+        if closest_idx is not None:
+            self.dragged_point_idx = closest_idx
+            self._draw_graph()
+
+    def _on_canvas_drag(self, event):
+        if self.dragged_point_idx is None:
+            return
+
+        idx = self.dragged_point_idx
+        p = self.points[idx]
+
+        # Drag vertical (Speed) - STRICTLY clamp within [0, 100] to prevent points from going below the graph
+        new_speed = int(self._y_to_speed(event.y))
+        p["speed"] = max(0, min(100, new_speed))
+
+        # Drag horizontal (Temperature) - P0 is fixed in X, P1..P6 are draggable
+        if not p.get("fixed_x", False):
+            min_temp = self.points[idx - 1]["temp"] + 1
+            max_temp = self.points[idx + 1]["temp"] - 1 if idx < 6 else 95
+            
+            new_temp = int(self._x_to_temp(event.x))
+            p["temp"] = max(min_temp, min(max_temp, new_temp))
+
+        self._update_recap()
+        self._draw_graph()
+
+    def _on_canvas_release(self, event):
+        self.dragged_point_idx = None
+        self._draw_graph()
 
     def _load_custom_defaults(self):
         """Read the current 'custom' profile from profiles.json."""
@@ -414,30 +522,17 @@ class CustomCurveEditor(ctk.CTkToplevel):
                 data = json.load(f)
             return data["profiles"]["custom"]
         except Exception:
-            # fall back to safe default values if the file is unreadable
             return {
                 "temperatures_c": [55, 64, 73, 76, 82, 88],
                 "speeds_percent":  [30, 40, 50, 60, 70, 80, 90]
             }
 
     def _on_save(self):
-        """Validate inputs and write the new custom profile back to profiles.json."""
-        try:
-            temps  = [int(v.get()) for v in self._temp_vars]
-            speeds = [int(v.get()) for v in self._speed_vars]
-        except ValueError:
-            self._status.configure(text="Integers only", text_color=DANGER)
-            return
-
-        # temperatures must be strictly ascending
-        if temps != sorted(temps):
-            self._status.configure(text="Temps must be ascending", text_color=DANGER)
-            return
-
-        # speeds must be between 0 and 100
-        if any(s < 0 or s > 100 for s in speeds):
-            self._status.configure(text="Speeds: 0–100 only", text_color=DANGER)
-            return
+        # Extract temperatures and speeds to match the EC expectations:
+        # temperatures_c has 6 values (from P1 to P6)
+        # speeds_percent has 7 values (from P0 to P6)
+        temps = [p["temp"] for p in self.points[1:]]
+        speeds = [p["speed"] for p in self.points]
 
         try:
             with open(CONFIG_PATH, "r") as f:
@@ -449,9 +544,8 @@ class CustomCurveEditor(ctk.CTkToplevel):
             with open(CONFIG_PATH, "w") as f:
                 json.dump(data, f, indent=2)
 
-            self._status.configure(text="Saved", text_color=SUCCESS)
-            # close after a short delay so the user sees the confirmation
-            self.after(700, self.destroy)
+            self._status.configure(text="Saved successfully", text_color=SUCCESS)
+            self.after(600, self.destroy)
 
         except Exception as e:
-            self._status.configure(text=f"{e}", text_color=DANGER)
+            self._status.configure(text=f"Save error: {e}", text_color=DANGER)

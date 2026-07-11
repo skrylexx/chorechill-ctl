@@ -63,10 +63,19 @@ hexdump -C "$EC_FILE" > "$BACKUP_FILE"
 echo "[INFO] EC defaults saved."
 
 # ==========================================
+# 5b. BUILD THE DAEMON
+# ==========================================
+echo "[INFO] Compiling C daemon..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+cd "$SCRIPT_DIR"
+make clean
+make
+
+# ==========================================
 # 6. INSTALL SYSTEMD SERVICE
 # ==========================================
 SERVICE_FILE="/etc/systemd/system/chorechill-ctl.service"
-DAEMON_PATH="$(realpath "$(dirname "$0")/backend/compiled/chorechill-ctl")"
+DAEMON_PATH="${SCRIPT_DIR}/backend/compiled/chorechill-ctl"
 
 echo "[INFO] Installing systemd service..."
 
@@ -87,9 +96,29 @@ EOF
 
 systemctl daemon-reload
 systemctl enable chorechill-ctl.service
+systemctl start chorechill-ctl.service
+echo "[INFO] Systemd daemon started."
+
+# ==========================================
+# 7. INSTALL CLIENT CLI WRAPPER
+# ==========================================
+CLI_WRAPPER="/usr/local/bin/chorechill"
+FRONTEND_PATH="${SCRIPT_DIR}/frontend/src/main.py"
+echo "[INFO] Installing CLI wrapper to ${CLI_WRAPPER}..."
+
+cat > "$CLI_WRAPPER" << EOF
+#!/bin/bash
+# Wrapper to launch chore chill frontend from anywhere
+python3 ${FRONTEND_PATH} "\$@"
+EOF
+
+chmod +x "$CLI_WRAPPER"
+echo "[INFO] CLI wrapper installed."
 
 echo ""
 echo "[OK] Installation complete."
-echo "     Build the daemon with:       make"
-echo "     Start it now with:           sudo systemctl start chorechill-ctl"
-echo "     Check status with:           sudo systemctl status chorechill-ctl"
+echo "     The C daemon has been compiled and started automatically."
+echo "     Launch the GUI from any terminal by running:  chorechill"
+echo ""
+echo "     Systemd Status:              sudo systemctl status chorechill-ctl"
+echo "     Systemd Restart:             sudo systemctl restart chorechill-ctl"

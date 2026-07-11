@@ -3,7 +3,7 @@
 #include "../include/profiles.h"
 #include "../include/hardware.h"
 
-void apply_profile_from_string(const char* payload) {
+int apply_profile_from_string(const char* payload) {
     uint8_t temps[6];
     uint8_t speeds[7];
 
@@ -18,7 +18,9 @@ void apply_profile_from_string(const char* payload) {
     if (parsed == 13) {
         printf("\n[PROFILES] Valid profile received. Injecting into EC...\n");
         apply_custom_curve(temps, speeds);
+        return 1;
     } else {
         printf("\n[PROFILES] Error: Invalid payload format (%d/13 parsed)\n", parsed);
+        return 0;
     }
 }

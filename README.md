@@ -163,6 +163,12 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 ---
 
+## Roadmap
+
+- [x] Create a graphical curve editor allowing users to drag 7 points to configure their custom profile.
+
+---
+
 ## References
 
 - [MSI WMI Platform — kernel docs](https://docs.kernel.org/wmi/devices/msi-wmi-platform.html)
