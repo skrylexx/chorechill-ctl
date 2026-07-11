@@ -90,6 +90,10 @@ Once installed, simply start the graphical application from any terminal:
 chorechill
 ```
 
+You can select standard cooling profiles or visually design a tailored profile using the interactive **Custom Curve Editor** (adjusting 7 temperature thresholds and fan speeds dynamically):
+
+![Custom Curve Editor](readme_img/custom_page.png)
+
 ### Managing the C Daemon (Systemd)
 
 The background control daemon is registered as a systemd service. You can control it using standard systemd commands:
