@@ -78,9 +78,16 @@ void handle_ipc_client(int sockfd, int temp, int fan, int rpm) {
         // route SET_CURVE to the profile parser (e.g. "SET_CURVE:55,64,...;38,43,...")
         if (strncmp(buffer, "SET_CURVE:", 10) == 0) {
             // buffer + 10 skips the "SET_CURVE:" prefix and sends the raw payload
-            apply_profile_from_string(buffer + 10);
-            // the EC now runs its own curve autonomously — disable the manual re-write loop
-            ipc_clear_manual_speed();
+            if (apply_profile_from_string(buffer + 10)) {
+                // the EC now runs its own curve autonomously — disable the manual re-write loop
+                ipc_clear_manual_speed();
+            } else {
+                char err_res[] = "ERR:INVALID_FORMAT";
+                ssize_t written = write(client_fd, err_res, strlen(err_res));
+                (void)written;
+                close(client_fd);
+                return;
+            }
 
         // route SET: to a direct fan speed override (e.g. "SET:75" → lock at 75%)
         } else if (strncmp(buffer, "SET:", 4) == 0) {
