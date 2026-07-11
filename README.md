@@ -15,6 +15,19 @@ Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/deb
 
 ---
 
+## Table of Contents
+
+- [Architecture](#architecture)
+- [IPC Protocol](#ipc-protocol)
+- [Prerequisites](#prerequisites)
+- [Setup & Running](#setup--running)
+- [How EC Addresses Were Found](#how-ec-addresses-were-found)
+- [Compatibility](#compatibility)
+- [Roadmap](#roadmap)
+- [References](#references)
+
+---
+
 ## Architecture
 
 ```
