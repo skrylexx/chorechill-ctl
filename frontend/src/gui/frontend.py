@@ -14,11 +14,12 @@ SURFACE  = "#21222c"
 BORDER   = "#44475a"
 TEXT     = "#f8f8f2"
 SUBTEXT  = "#6272a4"
-ACCENT   = "#bd93f9"
+ACCENT   = "#bd93f9"   # purple line
 ACCENT_H = "#a87ff1"   # hover state
-SUCCESS  = "#50fa7b"
-DANGER   = "#ff5555"
-CYAN     = "#8be9fd"
+SUCCESS  = "#50fa7b"   # green (base speed point)
+DANGER   = "#ff5555"   # red (offline badge)
+CYAN     = "#8be9fd"   # cyan (drag/active highlight)
+ORANGE   = "#ffb86c"   # orange (threshold points)
 
 FONT_TITLE  = ("Helvetica", 15, "bold")
 FONT_LABEL  = ("Helvetica", 11, "bold")
@@ -260,19 +261,19 @@ class CustomCurveEditor(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Configure Custom Mode")
-        self.geometry("760x500") # slightly taller window to prevent any layout clipping
+        self.geometry("800x520") # larger horizontal window as requested
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.grab_set()
 
-        # Canvas & Plot size math (strictly fit within canvas width 720, height 350)
+        # Canvas & Plot size math (strictly fit within canvas width 760, height 370)
         self.margin_left = 60
         self.margin_right = 30
         self.margin_top = 20
-        self.margin_bottom = 90
+        self.margin_bottom = 80
         
-        self.canvas_w = 720
-        self.canvas_h = 350
+        self.canvas_w = 760
+        self.canvas_h = 370
         
         self.plot_w = self.canvas_w - self.margin_left - self.margin_right
         self.plot_h = self.canvas_h - self.margin_top - self.margin_bottom
@@ -336,7 +337,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
 
         _sep(self)
 
-        # Footer Area
+        # Footer Area (larger buttons as requested: height 38)
         footer = ctk.CTkFrame(self, fg_color="transparent", height=50)
         footer.pack(fill="x", padx=20, pady=(5, 10))
         footer.pack_propagate(False)
@@ -347,13 +348,13 @@ class CustomCurveEditor(ctk.CTkToplevel):
         ctk.CTkButton(footer, text="Cancel", command=self.destroy,
                       fg_color=SURFACE, hover_color=BORDER,
                       text_color=TEXT, font=FONT_BTN,
-                      width=90, height=34, corner_radius=8,
-                      border_width=1, border_color=BORDER).pack(side="right", padx=(6, 0), pady=8)
+                      width=100, height=38, corner_radius=8,
+                      border_width=1, border_color=BORDER).pack(side="right", padx=(6, 0), pady=6)
 
         ctk.CTkButton(footer, text="Save & Apply", command=self._on_save,
                       fg_color=ACCENT, hover_color=ACCENT_H,
                       text_color=BG, font=FONT_BTN,
-                      width=120, height=34, corner_radius=8).pack(side="right", pady=8)
+                      width=130, height=38, corner_radius=8).pack(side="right", pady=6)
 
         self._update_recap()
         self._draw_graph()
@@ -385,13 +386,13 @@ class CustomCurveEditor(ctk.CTkToplevel):
         self.canvas.delete("all")
 
         # Draw grid & axes
-        # Y-Axis ticks (Speed)
+        # Y-Axis grid lines & ticks (Speed)
         for s in [0, 20, 40, 60, 80, 100]:
             y = self._speed_to_y(s)
             self.canvas.create_line(self.margin_left, y, self.margin_left + self.plot_w, y, fill=BORDER, dash=(2, 2))
             self.canvas.create_text(self.margin_left - 18, y, text=f"{s}%", fill=SUBTEXT, font=("Helvetica", 9))
 
-        # X-Axis ticks (Temperature grid lines starting at 25 C)
+        # X-Axis grid lines & ticks (Temperature starting at 25 C)
         for t in [25, 40, 55, 70, 85, 95]:
             x = self._temp_to_x(t)
             self.canvas.create_line(x, self.margin_top, x, self.margin_top + self.plot_h, fill=BORDER, dash=(2, 2))
@@ -431,7 +432,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
                 self.canvas.create_text(
                     x, y - 20,
                     text=f"{p['temp']}°C, {p['speed']}%",
-                    fill=SUCCESS,
+                    fill=CYAN,
                     font=("Helvetica", 10, "bold")
                 )
 
@@ -440,15 +441,18 @@ class CustomCurveEditor(ctk.CTkToplevel):
             self.canvas.create_line(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1], fill=ACCENT, width=3)
 
         # 4. Polish: Draw points with clean circular joints and high-contrast outer rings
+        # Color coding: S0 baseline is Green (SUCCESS), Thresholds T0-T5 are Orange (ORANGE)
         for idx, p in enumerate(self.points):
             x = self._temp_to_x(p["temp"])
             y = self._speed_to_y(p["speed"])
             
-            # Determine color and size: P0 (Idle speed) is Cyan, P1..P6 are Purple
-            if idx == 0:
-                color = SUCCESS if idx == self.dragged_point_idx else CYAN
+            # Determine color (active point glows in Cyan)
+            if idx == self.dragged_point_idx:
+                color = CYAN
+            elif idx == 0:
+                color = SUCCESS  # base speed point is green
             else:
-                color = SUCCESS if idx == self.dragged_point_idx else ACCENT
+                color = ORANGE   # threshold points are orange
                 
             r_outer = 7
             r_inner = 4
@@ -458,16 +462,16 @@ class CustomCurveEditor(ctk.CTkToplevel):
             # Inner circle
             self.canvas.create_oval(x - r_inner, y - r_inner, x + r_inner, y + r_inner, fill=color, outline="")
 
-        # 5. English Legend at the bottom center of the canvas area
-        legend_y = self.margin_top + self.plot_h + 48
+        # 5. English Legend at the bottom center of the canvas area (larger text: font size 10)
+        legend_y = self.margin_top + self.plot_h + 45
         
-        # P0 Cyan Indicator
-        self.canvas.create_oval(150 - 4, legend_y - 4, 150 + 4, legend_y + 4, fill=CYAN, outline="")
-        self.canvas.create_text(162, legend_y, text="Base Fan Speed S0 (Temp < T0)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
+        # P0 Green Indicator
+        self.canvas.create_oval(150 - 5, legend_y - 5, 150 + 5, legend_y + 5, fill=SUCCESS, outline="")
+        self.canvas.create_text(164, legend_y, text="Base Fan Speed S0 (Temp < T0)", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
         
-        # P1..P6 Purple Indicator
-        self.canvas.create_oval(430 - 4, legend_y - 4, 430 + 4, legend_y + 4, fill=ACCENT, outline="")
-        self.canvas.create_text(442, legend_y, text="Temperature Thresholds T0-T5 (Speeds S1-S6)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
+        # P1..P6 Orange Indicator
+        self.canvas.create_oval(430 - 5, legend_y - 5, 430 + 5, legend_y + 5, fill=ORANGE, outline="")
+        self.canvas.create_text(444, legend_y, text="Temperature Thresholds T0-T5 (Speeds S1-S6)", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
 
     def _on_canvas_click(self, event):
         # Find closest point
@@ -496,7 +500,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
         new_speed = int(self._y_to_speed(event.y))
         p["speed"] = max(0, min(100, new_speed))
 
-        # Drag horizontal (Temperature) - P0 is fixed in X again, P1..P6 are draggable
+        # Drag horizontal (Temperature) - P0 is fixed in X, P1..P6 are draggable
         if not p.get("fixed_x", False):
             min_temp = self.points[idx - 1]["temp"] + 1
             max_temp = self.points[idx + 1]["temp"] - 1 if idx < 6 else 95
