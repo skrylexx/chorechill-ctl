@@ -15,7 +15,7 @@ all: $(TARGET)
 $(TARGET): $(SRCS)
 	@mkdir -p $(OUT_DIR)
 	$(CC) $(CFLAGS) $(SRCS) -o $(TARGET)
-	@echo "[OK] Built → $(TARGET)"
+	@echo "[OK] Built --> $(TARGET)"
 
 clean:
 	rm -f $(TARGET)

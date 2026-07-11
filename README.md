@@ -68,9 +68,9 @@ The frontend and daemon communicate over a UNIX socket at `/tmp/chorechill-ctl.s
 
 | Command | Direction | Description |
 |---|---|---|
-| `GET` | frontend → daemon | Poll current telemetry |
-| `SET:<pct>` | frontend → daemon | Lock fan at `<pct>`%: daemon keeps re-writing every 100 ms to hold the EC |
-| `SET_CURVE:<t1,...,t6>;<s1,...,s7>` | frontend → daemon | Push a fan curve into EC registers; EC runs it autonomously, re-write loop stops |
+| `GET` | frontend --> daemon | Poll current telemetry |
+| `SET:<pct>` | frontend --> daemon | Lock fan at `<pct>`%: daemon keeps re-writing every 100 ms to hold the EC |
+| `SET_CURVE:<t1,...,t6>;<s1,...,s7>` | frontend --> daemon | Push a fan curve into EC registers; EC runs it autonomously, re-write loop stops |
 
 All commands return `<temp_c>,<fan_pct>,<rpm>` as the response.
 
@@ -149,8 +149,8 @@ sudo hexdump -C /sys/kernel/debug/ec/ec0/io > load.txt
 diff idle.txt load.txt
 ```
 
-Bytes that spike under load → fan speed registers.  
-Bytes that increase with heat → temperature registers.
+Bytes that spike under load --> fan speed registers.  
+Bytes that increase with heat --> temperature registers.
 
 > On this machine, fans were deliberately pushed by launching a Docker stack to cause visible peaks in the hexdump, making the fan register easy to identify.
 
@@ -158,8 +158,8 @@ Bytes that increase with heat → temperature registers.
 
 | Component       | Address | Access     | Example values              |
 |-----------------|---------|------------|------------------------------|
-| CPU Temperature | `0x68`  | Read       | `0x36` (54°C) → `0x59` (89°C) |
-| CPU Fan Speed   | `0x71`  | Read/Write | `0x2b` (43%) → `0x64` (100%)  |
+| CPU Temperature | `0x68`  | Read       | `0x36` (54°C) --> `0x59` (89°C) |
+| CPU Fan Speed   | `0x71`  | Read/Write | `0x2b` (43%) --> `0x64` (100%)  |
 | Fan Curve Temps | `0x6A–0x6F` | Write  | 6 temperature thresholds (°C) |
 | Fan Curve Speeds| `0x72–0x78` | Write  | 7 speed percentages (%)       |
 | GPU Temperature | `0x80`  | Read       | `0x00` (standby)            |

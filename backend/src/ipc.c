@@ -89,7 +89,7 @@ void handle_ipc_client(int sockfd, int temp, int fan, int rpm) {
                 return;
             }
 
-        // route SET: to a direct fan speed override (e.g. "SET:75" → lock at 75%)
+        // route SET: to a direct fan speed override (e.g. "SET:75" --> lock at 75%)
         } else if (strncmp(buffer, "SET:", 4) == 0) {
             int target_speed = atoi(buffer + 4);
             // clamp the value between 0 and 100 before writing to the EC

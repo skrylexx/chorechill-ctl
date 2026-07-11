@@ -76,7 +76,7 @@ echo "ec_sys" | sudo tee /etc/modules-load.d/ec_sys.conf
 
 ## 3. Taking Snapshots of EC Memory
 
-The EC has exactly 256 bytes of RAM (addresses `0x00` → `0xFF`). The strategy is:
+The EC has exactly 256 bytes of RAM (addresses `0x00` --> `0xFF`). The strategy is:
 1. Snapshot the EC at **idle** (everything cool and quiet)
 2. Snapshot again **under load** (CPU hot, fans spinning)
 3. Compare: any byte that changed under load is a candidate register
@@ -99,7 +99,7 @@ Each line covers 16 bytes. The left column is the starting address of the line i
 - Line `00000060` covers addresses `0x60` to `0x6F`
 - Line `00000070` covers addresses `0x70` to `0x7F`
 
-To find the value at a specific address, count columns from left. Address `0x68` is the 9th byte of the `0x60` line → value `0x36` (= 54°C in this example).
+To find the value at a specific address, count columns from left. Address `0x68` is the 9th byte of the `0x60` line --> value `0x36` (= 54°C in this example).
 
 ### Take your baseline snapshot
 
@@ -175,8 +175,8 @@ diff idle.txt load.txt
 - Bytes that changed are your candidates
 
 In this example:
-- Address `0x68` changed from `0x36` → `0x59` (54°C → 89°C) - **temperature register**
-- Address `0x71` changed from `0x2b` → `0x5a` (43% → 90%) - **fan speed register**
+- Address `0x68` changed from `0x36` --> `0x59` (54°C --> 89°C) - **temperature register**
+- Address `0x71` changed from `0x2b` --> `0x5a` (43% --> 90%) - **fan speed register**
 
 ---
 
@@ -234,22 +234,22 @@ These addresses were confirmed by differential analysis and direct write tests.
 
 | Component | Address | Access | Example values |
 |---|---|---|---|
-| CPU Temperature | `0x68` | Read | `0x36` (54°C) → `0x59` (89°C) |
+| CPU Temperature | `0x68` | Read | `0x36` (54°C) --> `0x59` (89°C) |
 | GPU Temperature | `0x80` | Read | `0x00` (standby) |
 
 ### Fan control registers (read/write)
 
 | Component | Address | Access | Example values |
 |---|---|---|---|
-| CPU Fan Speed (%) | `0x71` | Read/Write | `0x2b` (43%) → `0x64` (100%) |
+| CPU Fan Speed (%) | `0x71` | Read/Write | `0x2b` (43%) --> `0x64` (100%) |
 | GPU Fan Speed (%) | `0x89` | Read/Write | `0x00` (off) |
 
 ### Fan curve registers (write to reprogram EC behavior)
 
 | Register block | Addresses | Content |
 |---|---|---|
-| Temperature thresholds | `0x6A` → `0x6F` | 6 bytes - °C values (e.g. `55, 64, 73, 76, 82, 88`) |
-| Fan speed steps | `0x72` → `0x78` | 7 bytes - % values (e.g. `38, 43, 48, 54, 60, 70, 85`) |
+| Temperature thresholds | `0x6A` --> `0x6F` | 6 bytes - °C values (e.g. `55, 64, 73, 76, 82, 88`) |
+| Fan speed steps | `0x72` --> `0x78` | 7 bytes - % values (e.g. `38, 43, 48, 54, 60, 70, 85`) |
 | Fan mode control | `0xF4` | 1 byte - EC control mode flag |
 
 > **How the curve works:** The EC reads the temperature thresholds every cycle. When CPU temp crosses threshold T[i], it ramps the fan toward speed S[i+1]. There are 6 thresholds and 7 speeds - the first speed (S[0]) applies below T[0], and the last (S[6]) applies above T[5].
