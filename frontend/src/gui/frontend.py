@@ -466,12 +466,12 @@ class CustomCurveEditor(ctk.CTkToplevel):
         legend_y = self.margin_top + self.plot_h + 45
         
         # P0 Green Indicator
-        self.canvas.create_oval(150 - 5, legend_y - 5, 150 + 5, legend_y + 5, fill=SUCCESS, outline="")
-        self.canvas.create_text(164, legend_y, text="Base Fan Speed S0 (Temp < T0)", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
+        self.canvas.create_oval(210 - 5, legend_y - 5, 210 + 5, legend_y + 5, fill=SUCCESS, outline="")
+        self.canvas.create_text(224, legend_y, text="Base Fan Speed", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
         
         # P1..P6 Orange Indicator
-        self.canvas.create_oval(430 - 5, legend_y - 5, 430 + 5, legend_y + 5, fill=ORANGE, outline="")
-        self.canvas.create_text(444, legend_y, text="Temperature Thresholds T0-T5 (Speeds S1-S6)", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
+        self.canvas.create_oval(440 - 5, legend_y - 5, 440 + 5, legend_y + 5, fill=ORANGE, outline="")
+        self.canvas.create_text(454, legend_y, text="Temperature Threshold", fill=TEXT, font=("Helvetica", 10, "bold"), anchor="w")
 
     def _on_canvas_click(self, event):
         # Find closest point
