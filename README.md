@@ -153,8 +153,17 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 ## Compatibility
 
-> v1 targets the **MSI GF63 Thin** specifically (or machines with the same motherboard).  
-> EC register layout varies by manufacturer and model.
+- **Validated Hardware**: Optimized and tested on the **MSI GF63 Thin** (and other MSI laptops sharing the same motherboard architecture/EC layout).
+- **Other MSI Laptops**: Laptops from different MSI series (e.g., Creator, Raider, Stealth, or other GF/GS models) might have compatible registers, but layouts should be verified first. Note that the RPM calculation formula (`478000 / raw_value`) is MSI-specific.
+- **Other Laptop Brands (ASUS, Lenovo, HP, etc.)**: Not supported out of the box due to vendor-specific EC layouts. If you want to use this daemon on another brand:
+  1. Follow the differential analysis guide in [How2Get_Good_Addresses.md](./How2Get_Good_Addresses.md) to locate your CPU temperature, fan speed control, and curve registers.
+  2. Modify the static register address definitions in [backend/src/hardware.c](./backend/src/hardware.c).
+- **System Prerequisites**:
+  - Requires a Linux kernel with the `ec_sys` module loaded (`write_support=1`).
+  - **Secure Boot must be disabled** in your BIOS/UEFI to prevent kernel lockdown from blocking write operations to `/sys/kernel/debug/ec/ec0/io`.
+
+> [!NOTE]
+> Future releases aim to support dynamic register probing, automated initial calibration, and cross-brand drivers. See the [ROADMAP.md](./backend/ROADMAP.md) for more details.
 
 ---
 
