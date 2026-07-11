@@ -145,7 +145,7 @@ class FanControllerUI:
             border_width=1,
             border_color=BORDER,
         )
-        self._config_btn.pack(fill="x", padx=16, pady=(8, 16))
+        self._config_btn.pack(fill="x", padx=16, pady=(20, 20), expand=True)
 
     def _build_profiles(self):
         section = ctk.CTkFrame(self.right_col, fg_color=SURFACE, corner_radius=10,
@@ -178,7 +178,7 @@ class FanControllerUI:
                 border_width=1,
                 border_color=BORDER,
             )
-            btn.pack(fill="x", padx=16, pady=(4, 4))
+            btn.pack(fill="x", padx=16, pady=(3, 3))
 
     def _build_status(self):
         # Stretched bottom bar for status
