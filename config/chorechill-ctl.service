@@ -1,0 +1,13 @@
+[Unit]
+Description=Chore Chill CTL - EC fan control daemon
+After=multi-user.target
+
+[Service]
+Type=simple
+# adjust the path to match your install location
+ExecStart=/usr/local/bin/chorechill-ctl
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

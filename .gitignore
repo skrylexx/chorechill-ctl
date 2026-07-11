@@ -1,2 +1,38 @@
-backend/compiled/*
+# Compiled C binaries and objects
+backend/compiled/
+*.o
+*.out
+
+# Python cache and bytecode
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Hexdump snapshots and local investigation files
+*idle.txt
+*load.txt
+*snapshot.txt
+*.hex
+*.log
+
+# Editor and IDE configurations
 .vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# OS-specific files
+.DS_Store
+Thumbs.db
