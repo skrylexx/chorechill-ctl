@@ -40,7 +40,7 @@ class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
         self.root.title("chore chill")
-        self.root.geometry("640x300")
+        self.root.geometry("640x330")
         self.root.resizable(False, False)
         self.root.configure(fg_color=BG)
 
@@ -160,6 +160,7 @@ class FanControllerUI:
             ("MSI Default", self.msi_default_curve),
             ("Silent Mode", self.silent_fan_curve),
             ("Gaming Mode", self.gaming_fan_curve),
+            ("Custom Mode", self.custom_fan_curve_apply),
         ]
 
         for text, cmd in profiles:
@@ -230,6 +231,11 @@ class FanControllerUI:
         print("[UI] Setting gaming fan curve...")
         if self.mode_callback:
             self.mode_callback("gaming_curve")
+
+    def custom_fan_curve_apply(self):
+        print("[UI] Applying custom fan curve...")
+        if self.mode_callback:
+            self.mode_callback("custom_curve")
 
     def custom_fan_curve(self):
         print("[UI] Opening custom curve editor...")
