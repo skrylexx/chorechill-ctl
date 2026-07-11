@@ -251,7 +251,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
     """Modal window to edit the 'custom' fan curve profile graphically.
 
     Displays a canvas with 7 interactive draggable points.
-    Horizontal axis represents CPU temperature (0 to 95 C).
+    Horizontal axis represents CPU temperature (25 to 95 C).
     Vertical axis represents fan speed percentage (0 to 100 %).
     On save, writes back to profiles.json so the next apply_profile('custom') picks it up.
     """
@@ -275,13 +275,19 @@ class CustomCurveEditor(ctk.CTkToplevel):
         defaults = self._load_custom_defaults()
 
         # Build self.points (7 points) from defaults:
-        # P0 is fixed at temp=0, adjustable in speed.
-        # P1..P6 correspond to temperatures_c[0..5] and speeds_percent[1..6]
+        # P0 is fixed at temp=25 (start threshold), adjustable in speed (S0).
+        # P1..P6 correspond to temperatures_c[0..5] and speeds_percent[1..6].
+        # We ensure temperatures are loaded with 25 C minimum.
         self.points = []
-        self.points.append({"temp": 0, "speed": defaults["speeds_percent"][0], "fixed_x": True})
+        
+        # P0 starting speed S[0]
+        self.points.append({"temp": 25, "speed": defaults["speeds_percent"][0], "fixed_x": True})
+        
+        # P1..P6 representing thresholds T[0..5] and speeds S[1..6]
         for i in range(6):
+            t_val = max(26 + i, defaults["temperatures_c"][i])  # enforce strictly ascending above 25 C
             self.points.append({
-                "temp": defaults["temperatures_c"][i],
+                "temp": t_val,
                 "speed": defaults["speeds_percent"][i + 1],
                 "fixed_x": False
             })
@@ -295,10 +301,10 @@ class CustomCurveEditor(ctk.CTkToplevel):
 
         ctk.CTkLabel(hdr_frame, text="Custom Curve Editor", font=FONT_TITLE, text_color=TEXT).pack(side="left")
 
-        # Top-right live recap label
+        # Top-right live recap label (displays real temperatures in C, and speeds in %)
         self.recap_label = ctk.CTkLabel(
             hdr_frame, text="",
-            font=("Helvetica", 11),
+            font=("Helvetica", 11, "bold"),
             text_color=SUBTEXT,
             justify="right"
         )
@@ -348,22 +354,23 @@ class CustomCurveEditor(ctk.CTkToplevel):
         self._draw_graph()
 
     def _temp_to_x(self, temp):
-        return self.margin_left + (temp / 95.0) * self.plot_w
+        # Range is 25 C to 95 C (width of 70 degrees)
+        return self.margin_left + ((temp - 25) / 70.0) * self.plot_w
 
     def _speed_to_y(self, speed):
         return self.margin_top + (1.0 - speed / 100.0) * self.plot_h
 
     def _x_to_temp(self, x):
-        val = ((x - self.margin_left) / float(self.plot_w)) * 95.0
-        return max(0.0, min(95.0, val))
+        val = 25.0 + ((x - self.margin_left) / float(self.plot_w)) * 70.0
+        return max(25.0, min(95.0, val))
 
     def _y_to_speed(self, y):
         val = (1.0 - (y - self.margin_top) / float(self.plot_h)) * 100.0
         return max(0.0, min(100.0, val))
 
     def _update_recap(self):
-        # Format the selected coordinates dynamically
-        temps_str = ", ".join(f"{p['temp']}C" for p in self.points[1:])
+        # Format the selected coordinates dynamically using real decimal values (with °C and %)
+        temps_str = ", ".join(f"{p['temp']}°C" for p in self.points[1:])
         speeds_str = ", ".join(f"{p['speed']}%" for p in self.points)
         self.recap_label.configure(
             text=f"Temps:  {temps_str}\nSpeeds: {speeds_str}"
@@ -379,31 +386,68 @@ class CustomCurveEditor(ctk.CTkToplevel):
             self.canvas.create_line(self.margin_left, y, self.margin_left + self.plot_w, y, fill=BORDER, dash=(2, 2))
             self.canvas.create_text(self.margin_left - 15, y, text=f"{s}%", fill=SUBTEXT, font=("Helvetica", 9))
 
-        # X-Axis ticks (Temperature)
-        for t in [0, 20, 40, 60, 80, 95]:
+        # X-Axis ticks (Temperature grid lines starting at 25 C)
+        for t in [25, 40, 55, 70, 85, 95]:
             x = self._temp_to_x(t)
             self.canvas.create_line(x, self.margin_top, x, self.margin_top + self.plot_h, fill=BORDER, dash=(2, 2))
-            self.canvas.create_text(x, self.margin_top + self.plot_h + 15, text=f"{t}C", fill=SUBTEXT, font=("Helvetica", 9))
+            self.canvas.create_text(x, self.margin_top + self.plot_h + 15, text=f"{t}°C", fill=SUBTEXT, font=("Helvetica", 9))
 
-        # Draw axis lines
+        # Draw main axis lines
         self.canvas.create_line(self.margin_left, self.margin_top, self.margin_left, self.margin_top + self.plot_h, fill=BORDER)
         self.canvas.create_line(self.margin_left, self.margin_top + self.plot_h, self.margin_left + self.plot_w, self.margin_top + self.plot_h, fill=BORDER)
 
-        # Draw lines connecting the 7 points
+        # Plot coordinates
         coords = []
         for p in self.points:
             coords.append((self._temp_to_x(p["temp"]), self._speed_to_y(p["speed"])))
 
-        for i in range(1, len(coords)):
-            self.canvas.create_line(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1], fill=ACCENT, width=3)
+        # 1. Polish: Draw glowing area under the curve (filled polygon using Dracula palette)
+        poly_coords = []
+        poly_coords.append(self.margin_left)
+        poly_coords.append(self.margin_top + self.plot_h)
+        for cx, cy in coords:
+            poly_coords.append(cx)
+            poly_coords.append(cy)
+        poly_coords.append(coords[-1][0])
+        poly_coords.append(self.margin_top + self.plot_h)
+        # Soft fill color blending nicely with the dark background
+        self.canvas.create_polygon(poly_coords, fill="#352e4f", outline="")
 
-        # Draw points
+        # 2. Polish: Draw thin vertical dashed projection lines down to the X-axis for each point
         for idx, p in enumerate(self.points):
             x = self._temp_to_x(p["temp"])
             y = self._speed_to_y(p["speed"])
+            
+            # Dashed line from point down to X-axis
+            self.canvas.create_line(x, y, x, self.margin_top + self.plot_h, fill=BORDER, dash=(2, 2))
+
+            # Display a floating coordinate tooltip above the active dragged point
+            if idx == self.dragged_point_idx:
+                self.canvas.create_text(
+                    x, y - 20,
+                    text=f"{p['temp']}°C, {p['speed']}%",
+                    fill=SUCCESS,
+                    font=("Helvetica", 10, "bold")
+                )
+
+        # 3. Polish: Draw the main curve line (thick purple accent line)
+        for i in range(1, len(coords)):
+            self.canvas.create_line(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1], fill=ACCENT, width=3)
+
+        # 4. Polish: Draw points with clean circular joints and high-contrast outer rings
+        for idx, p in enumerate(self.points):
+            x = self._temp_to_x(p["temp"])
+            y = self._speed_to_y(p["speed"])
+            
+            # Determine color and size (active point glows in green)
             color = SUCCESS if idx == self.dragged_point_idx else ACCENT
-            # Draw point circle
-            self.canvas.create_oval(x - 6, y - 6, x + 6, y + 6, fill=color, outline=BG, width=2)
+            r_outer = 7
+            r_inner = 4
+            
+            # Outer ring
+            self.canvas.create_oval(x - r_outer, y - r_outer, x + r_outer, y + r_outer, fill=BORDER, outline="")
+            # Inner circle
+            self.canvas.create_oval(x - r_inner, y - r_inner, x + r_inner, y + r_inner, fill=color, outline="")
 
     def _on_canvas_click(self, event):
         # Find closest point
@@ -428,13 +472,13 @@ class CustomCurveEditor(ctk.CTkToplevel):
         idx = self.dragged_point_idx
         p = self.points[idx]
 
-        # Drag vertical (Speed)
+        # Drag vertical (Speed) - STRICTLY clamp within [0, 100] to prevent points from going below the graph
         new_speed = int(self._y_to_speed(event.y))
-        p["speed"] = new_speed
+        p["speed"] = max(0, min(100, new_speed))
 
         # Drag horizontal (Temperature)
         if not p["fixed_x"]:
-            # Clamp between previous point and next point
+            # Clamp between previous point and next point to maintain ascending order
             min_temp = self.points[idx - 1]["temp"] + 1
             max_temp = self.points[idx + 1]["temp"] - 1 if idx < 6 else 95
             
