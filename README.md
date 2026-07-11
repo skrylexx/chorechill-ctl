@@ -2,6 +2,8 @@
 
 > A handmade fan control daemon for Linux, built to save an old MSI GF63 Thin from dying.
 
+![Chore Chill Preview](readme_img/main_page.png)
+
 Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/debug/ec/ec0/io` to read CPU temperature and control fan speed at a low level.
 
 ---
@@ -10,7 +12,7 @@ Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/deb
 
 ```
 chorechill-ctl/
-├── install.sh                      # Deployment & module setup script (run as root)
+├── install.sh                      # Deployment, compilation & wrapper setup (run as root)
 ├── Makefile                        # C build automation
 ├── README.md                       # You are here
 ├── How2Get_Good_Addresses.md       # EC investigation guide (hexdump method)
@@ -72,46 +74,35 @@ cat /sys/kernel/security/lockdown
 
 ---
 
-## Setup
+## Setup & Running
 
-Run the install script (sets up `ec_sys` with write support permanently, installs deps, and registers the systemd service):
+To install, compile, configure, and register the global service and client in one step, run the installer:
 
 ```bash
 sudo bash install.sh
 ```
 
-What it does:
-1. Mounts `debugfs` (`/sys/kernel/debug`)
-2. Configures `ec_sys` with `write_support=1` persistently via `/etc/modprobe.d/`
-3. Forces `ec_sys` to load at every boot via `/etc/modules-load.d/`
-4. Loads the module immediately
-5. Installs `python3-tk` and `libcjson-dev`
-6. Saves a hexdump of EC defaults to `/etc/chorechill-ctl/ec_defaults.hex`
-7. Installs and enables the systemd service
+### Running the Client GUI
 
----
-
-## Build & Run
+Once installed, simply start the graphical application from any terminal:
 
 ```bash
-# Build the daemon
-make
-
-# (optional) load the EC module manually if not done by install.sh
-sudo modprobe -r ec_sys || true
-sudo modprobe ec_sys write_support=1
-
-# Start the daemon (or let systemd handle it)
-sudo ./backend/compiled/chorechill-ctl
-
-# In another terminal, start the GUI
-cd frontend/src && python3 main.py
+chorechill
 ```
 
-Via systemd (after install.sh):
+### Managing the C Daemon (Systemd)
+
+The background control daemon is registered as a systemd service. You can control it using standard systemd commands:
+
 ```bash
-sudo systemctl start chorechill-ctl
+# Check service logs and status
 sudo systemctl status chorechill-ctl
+
+# Restart the service
+sudo systemctl restart chorechill-ctl
+
+# Stop the service
+sudo systemctl stop chorechill-ctl
 ```
 
 ---
