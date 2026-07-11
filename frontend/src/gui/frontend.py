@@ -260,36 +260,41 @@ class CustomCurveEditor(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Configure Custom Mode")
-        self.geometry("760x480")
+        self.geometry("760x500") # slightly taller window to prevent any layout clipping
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.grab_set()
 
-        # Canvas boundaries (height adjusted to fit the bottom legend)
-        self.margin_left = 50
+        # Canvas & Plot size math (strictly fit within canvas width 720, height 350)
+        self.margin_left = 60
         self.margin_right = 30
-        self.margin_top = 30
-        self.margin_bottom = 70
-        self.plot_w = 760 - self.margin_left - self.margin_right
-        self.plot_h = 370 - self.margin_top - self.margin_bottom
+        self.margin_top = 20
+        self.margin_bottom = 90
+        
+        self.canvas_w = 720
+        self.canvas_h = 350
+        
+        self.plot_w = self.canvas_w - self.margin_left - self.margin_right
+        self.plot_h = self.canvas_h - self.margin_top - self.margin_bottom
 
         defaults = self._load_custom_defaults()
 
         # Build self.points (7 points) from defaults:
-        # P0 is fully adjustable in X and Y (starts at 25 C by default).
+        # P0 is fixed at temp=25 (start threshold), adjustable vertically (S0).
         # P1..P6 correspond to temperatures_c[0..5] and speeds_percent[1..6].
         # We ensure temperatures are loaded with 25 C minimum.
         self.points = []
         
-        # P0 starting speed S[0]
-        self.points.append({"temp": 25, "speed": defaults["speeds_percent"][0]})
+        # P0 starting speed S[0] (fixed X, adjustable Y)
+        self.points.append({"temp": 25, "speed": defaults["speeds_percent"][0], "fixed_x": True})
         
-        # P1..P6 representing thresholds T[0..5] and speeds S[1..6]
+        # P1..P6 representing thresholds T[0..5] and speeds S[1..6] (adjustable X & Y)
         for i in range(6):
             t_val = max(26 + i, defaults["temperatures_c"][i])  # enforce strictly ascending above 25 C
             self.points.append({
                 "temp": t_val,
-                "speed": defaults["speeds_percent"][i + 1]
+                "speed": defaults["speeds_percent"][i + 1],
+                "fixed_x": False
             })
 
         self.dragged_point_idx = None
@@ -314,16 +319,16 @@ class CustomCurveEditor(ctk.CTkToplevel):
 
         # Build Canvas Area
         self.canvas_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.canvas_frame.pack(fill="both", expand=True, padx=20, pady=10)
+        self.canvas_frame.pack(fill="x", padx=20, pady=10)
 
         self.canvas = ctk.CTkCanvas(
             self.canvas_frame,
-            width=720,
-            height=310,
+            width=self.canvas_w,
+            height=self.canvas_h,
             bg=BG,
             highlightthickness=0
         )
-        self.canvas.pack(fill="both", expand=True)
+        self.canvas.pack()
 
         self.canvas.bind("<Button-1>", self._on_canvas_click)
         self.canvas.bind("<B1-Motion>", self._on_canvas_drag)
@@ -333,7 +338,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
 
         # Footer Area
         footer = ctk.CTkFrame(self, fg_color="transparent", height=50)
-        footer.pack(fill="x", padx=20, pady=10)
+        footer.pack(fill="x", padx=20, pady=(5, 10))
         footer.pack_propagate(False)
 
         self._status = ctk.CTkLabel(footer, text="", font=FONT_LABEL, text_color=SUBTEXT)
@@ -384,7 +389,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
         for s in [0, 20, 40, 60, 80, 100]:
             y = self._speed_to_y(s)
             self.canvas.create_line(self.margin_left, y, self.margin_left + self.plot_w, y, fill=BORDER, dash=(2, 2))
-            self.canvas.create_text(self.margin_left - 15, y, text=f"{s}%", fill=SUBTEXT, font=("Helvetica", 9))
+            self.canvas.create_text(self.margin_left - 18, y, text=f"{s}%", fill=SUBTEXT, font=("Helvetica", 9))
 
         # X-Axis ticks (Temperature grid lines starting at 25 C)
         for t in [25, 40, 55, 70, 85, 95]:
@@ -453,16 +458,16 @@ class CustomCurveEditor(ctk.CTkToplevel):
             # Inner circle
             self.canvas.create_oval(x - r_inner, y - r_inner, x + r_inner, y + r_inner, fill=color, outline="")
 
-        # 5. Legend at the bottom center of the canvas area
-        legend_y = self.margin_top + self.plot_h + 38
+        # 5. English Legend at the bottom center of the canvas area
+        legend_y = self.margin_top + self.plot_h + 48
         
         # P0 Cyan Indicator
-        self.canvas.create_oval(190 - 4, legend_y - 4, 190 + 4, legend_y + 4, fill=CYAN, outline="")
-        self.canvas.create_text(202, legend_y, text="Base Speed (S0, temp < T0)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
+        self.canvas.create_oval(150 - 4, legend_y - 4, 150 + 4, legend_y + 4, fill=CYAN, outline="")
+        self.canvas.create_text(162, legend_y, text="Base Fan Speed S0 (Temp < T0)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
         
         # P1..P6 Purple Indicator
-        self.canvas.create_oval(410 - 4, legend_y - 4, 410 + 4, legend_y + 4, fill=ACCENT, outline="")
-        self.canvas.create_text(422, legend_y, text="Temperature Thresholds (T0-T5 / S1-S6)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
+        self.canvas.create_oval(430 - 4, legend_y - 4, 430 + 4, legend_y + 4, fill=ACCENT, outline="")
+        self.canvas.create_text(442, legend_y, text="Temperature Thresholds T0-T5 (Speeds S1-S6)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
 
     def _on_canvas_click(self, event):
         # Find closest point
@@ -491,20 +496,11 @@ class CustomCurveEditor(ctk.CTkToplevel):
         new_speed = int(self._y_to_speed(event.y))
         p["speed"] = max(0, min(100, new_speed))
 
-        # Drag horizontal (Temperature) - now P0 is also draggable horizontally!
-        if idx == 0:
-            min_temp = 25
-            max_temp = self.points[1]["temp"] - 1
-            new_temp = int(self._x_to_temp(event.x))
-            p["temp"] = max(min_temp, min(max_temp, new_temp))
-        elif idx < 6:
+        # Drag horizontal (Temperature) - P0 is fixed in X again, P1..P6 are draggable
+        if not p.get("fixed_x", False):
             min_temp = self.points[idx - 1]["temp"] + 1
-            max_temp = self.points[idx + 1]["temp"] - 1
-            new_temp = int(self._x_to_temp(event.x))
-            p["temp"] = max(min_temp, min(max_temp, new_temp))
-        else:  # idx == 6
-            min_temp = self.points[5]["temp"] + 1
-            max_temp = 95
+            max_temp = self.points[idx + 1]["temp"] - 1 if idx < 6 else 95
+            
             new_temp = int(self._x_to_temp(event.x))
             p["temp"] = max(min_temp, min(max_temp, new_temp))
 
