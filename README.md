@@ -69,12 +69,12 @@ The frontend and daemon communicate over a UNIX socket at `/tmp/chorechill-ctl.s
 | Command | Direction | Description |
 |---|---|---|
 | `GET` | frontend → daemon | Poll current telemetry |
-| `SET:<pct>` | frontend → daemon | Lock fan at `<pct>`% — daemon keeps re-writing every 100 ms to hold the EC |
+| `SET:<pct>` | frontend → daemon | Lock fan at `<pct>`%: daemon keeps re-writing every 100 ms to hold the EC |
 | `SET_CURVE:<t1,...,t6>;<s1,...,s7>` | frontend → daemon | Push a fan curve into EC registers; EC runs it autonomously, re-write loop stops |
 
 All commands return `<temp_c>,<fan_pct>,<rpm>` as the response.
 
-> **Why the re-write loop?** The EC has its own thermal algorithm. Writing once to the fan speed register (`0x71`) only works for a few seconds — the EC overrides it. The daemon re-writes every 100 ms to hold manual mode. `SET_CURVE` writes to the curve registers (`0x6A–0x78`) which the EC enforces autonomously, so no re-write is needed.
+> **Why the re-write loop?** The EC has its own thermal algorithm. Writing once to the fan speed register (`0x71`) only works for a few seconds because the EC overrides it. The daemon re-writes every 100 ms to hold manual mode. `SET_CURVE` writes to the curve registers (`0x6A–0x78`) which the EC enforces autonomously, so no re-write is needed.
 
 ---
 
@@ -165,7 +165,7 @@ Bytes that increase with heat → temperature registers.
 | GPU Temperature | `0x80`  | Read       | `0x00` (standby)            |
 | GPU Fan Speed   | `0x89`  | Read/Write | `0x00` (off)                |
 
-> **Note:** The EC has its own control loop — writing a curve to `0x6A–0x78` makes the EC enforce it automatically. For a manual lock (`SET:<pct>`), the daemon writes directly to `0x71`.
+> **Note:** The EC has its own control loop: writing a curve to `0x6A–0x78` makes the EC enforce it automatically. For a manual lock (`SET:<pct>`), the daemon writes directly to `0x71`.
 
 For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Addresses.md).
 
@@ -195,5 +195,5 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 ## References
 
-- [MSI WMI Platform — kernel docs](https://docs.kernel.org/wmi/devices/msi-wmi-platform.html)
-- [`ec_sys` module — kernel docs](https://www.kernel.org/doc/html/latest/admin-guide/acpi/ec_access.html)
+- [MSI WMI Platform - kernel docs](https://docs.kernel.org/wmi/devices/msi-wmi-platform.html)
+- [`ec_sys` module - kernel docs](https://www.kernel.org/doc/html/latest/admin-guide/acpi/ec_access.html)

@@ -1,5 +1,5 @@
 #!/bin/bash
-# install.sh — sets up the host system for chorechill-ctl
+# install.sh - sets up the host system for chorechill-ctl
 # run with: sudo bash install.sh
 
 set -e
@@ -81,7 +81,7 @@ echo "[INFO] Installing systemd service..."
 
 cat > "$SERVICE_FILE" << EOF
 [Unit]
-Description=Chore Chill CTL — EC fan control daemon
+Description=Chore Chill CTL - EC fan control daemon
 After=multi-user.target
 
 [Service]

@@ -46,7 +46,7 @@ int main() {
         // check for IPC messages every 100ms
         handle_ipc_client(g_sockfd, temp, fan, fan_rpm);
 
-        // if a manual override is active, keep writing the setpoint every cycle —
+        // if a manual override is active, keep writing the setpoint every cycle:
         // the EC runs its own thermal loop and will reclaim control otherwise
         int manual = ipc_get_manual_speed();
         if (manual >= 0) {

@@ -200,7 +200,7 @@ class FanControllerUI:
         self._status_label.pack(pady=(0, 10))
 
     # ==========================================
-    # PUBLIC API — called from main.py
+    # PUBLIC API: called from main.py
     # ==========================================
 
     def update_telemetry(self, temp, fan_pct, rpm):

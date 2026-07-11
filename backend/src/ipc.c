@@ -79,7 +79,7 @@ void handle_ipc_client(int sockfd, int temp, int fan, int rpm) {
         if (strncmp(buffer, "SET_CURVE:", 10) == 0) {
             // buffer + 10 skips the "SET_CURVE:" prefix and sends the raw payload
             if (apply_profile_from_string(buffer + 10)) {
-                // the EC now runs its own curve autonomously — disable the manual re-write loop
+                // the EC now runs its own curve autonomously, disabling the manual re-write loop
                 ipc_clear_manual_speed();
             } else {
                 char err_res[] = "ERR:INVALID_FORMAT";
@@ -106,7 +106,7 @@ void handle_ipc_client(int sockfd, int temp, int fan, int rpm) {
     char response[256];
     snprintf(response, sizeof(response), "%d,%d,%d", temp, fan, rpm);
     ssize_t written = write(client_fd, response, strlen(response));
-    (void)written;  // partial writes acceptable — GUI will retry on next poll
+    (void)written;  // partial writes acceptable: GUI will retry on next poll
 
     close(client_fd);
 }

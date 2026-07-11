@@ -17,7 +17,7 @@
 
 ---
 
-## 1. Prerequisites — Kernel Lockdown
+## 1. Prerequisites: Kernel Lockdown
 
 If **Secure Boot** is enabled in the BIOS, Linux activates "Lockdown" mode. This blocks direct access to `/sys/kernel/debug/ec/ec0/io`, even for `root`.
 
@@ -79,7 +79,7 @@ echo "ec_sys" | sudo tee /etc/modules-load.d/ec_sys.conf
 The EC has exactly 256 bytes of RAM (addresses `0x00` → `0xFF`). The strategy is:
 1. Snapshot the EC at **idle** (everything cool and quiet)
 2. Snapshot again **under load** (CPU hot, fans spinning)
-3. Compare — any byte that changed under load is a candidate register
+3. Compare: any byte that changed under load is a candidate register
 
 ### Snapshot command
 
@@ -175,8 +175,8 @@ diff idle.txt load.txt
 - Bytes that changed are your candidates
 
 In this example:
-- Address `0x68` changed from `0x36` → `0x59` (54°C → 89°C) — **temperature register**
-- Address `0x71` changed from `0x2b` → `0x5a` (43% → 90%) — **fan speed register**
+- Address `0x68` changed from `0x36` → `0x59` (54°C → 89°C) - **temperature register**
+- Address `0x71` changed from `0x2b` → `0x5a` (43% → 90%) - **fan speed register**
 
 ---
 
@@ -192,7 +192,7 @@ Once you have a list of changed bytes, you need to tell temperatures from fan sp
 | Value range under load | 70–100 | 60–100 |
 | Changes gradually | Yes | Yes |
 | Writable (fan responds) | No | Yes |
-| Reacts to cooling (fan off) | Yes | — |
+| Reacts to cooling (fan off) | Yes | - |
 
 ### Confirming a fan register by writing to it
 
@@ -205,7 +205,7 @@ printf '\x64' | sudo dd of=/sys/kernel/debug/ec/ec0/io bs=1 seek=$((0x71)) conv=
 printf '\x2b' | sudo dd of=/sys/kernel/debug/ec/ec0/io bs=1 seek=$((0x71)) conv=notrunc
 ```
 
-> **Warning:** Do not leave the fan at 0% (`\x00`) for long — the EC will likely reclaim control within seconds, but be careful.
+> **Warning:** Do not leave the fan at 0% (`\x00`) for long: the EC will likely reclaim control within seconds, but be careful.
 
 ### Confirming a temperature register
 
@@ -248,9 +248,9 @@ These addresses were confirmed by differential analysis and direct write tests.
 
 | Register block | Addresses | Content |
 |---|---|---|
-| Temperature thresholds | `0x6A` → `0x6F` | 6 bytes — °C values (e.g. `55, 64, 73, 76, 82, 88`) |
-| Fan speed steps | `0x72` → `0x78` | 7 bytes — % values (e.g. `38, 43, 48, 54, 60, 70, 85`) |
-| Fan mode control | `0xF4` | 1 byte — EC control mode flag |
+| Temperature thresholds | `0x6A` → `0x6F` | 6 bytes - °C values (e.g. `55, 64, 73, 76, 82, 88`) |
+| Fan speed steps | `0x72` → `0x78` | 7 bytes - % values (e.g. `38, 43, 48, 54, 60, 70, 85`) |
+| Fan mode control | `0xF4` | 1 byte - EC control mode flag |
 
 > **How the curve works:** The EC reads the temperature thresholds every cycle. When CPU temp crosses threshold T[i], it ramps the fan toward speed S[i+1]. There are 6 thresholds and 7 speeds - the first speed (S[0]) applies below T[0], and the last (S[6]) applies above T[5].
 
@@ -307,5 +307,5 @@ write_ec_byte(0x71, 75);               // lock fan at 75%
 ## References
 
 - [`ec_sys` kernel module documentation](https://www.kernel.org/doc/html/latest/admin-guide/acpi/ec_access.html)
-- [MSI WMI Platform — kernel docs](https://docs.kernel.org/wmi/devices/msi-wmi-platform.html)
+- [MSI WMI Platform - kernel docs](https://docs.kernel.org/wmi/devices/msi-wmi-platform.html)
 - [ACPI EC specification (ACPI 6.5 spec, §12)](https://uefi.org/sites/default/files/resources/ACPI_Spec_6_5_Aug29.pdf)
