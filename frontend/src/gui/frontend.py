@@ -40,7 +40,7 @@ class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
         self.root.title("chore chill")
-        self.root.geometry("640x300")
+        self.root.geometry("640x310")
         self.root.resizable(False, False)
         self.root.configure(fg_color=BG)
 
@@ -131,6 +131,17 @@ class FanControllerUI:
         ctk.CTkLabel(section, text="FAN CONTROL",
                      font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(12, 4))
 
+        # Helpful descriptive label to balance the height and fill vertical space
+        desc_label = ctk.CTkLabel(
+            section,
+            text="Create and edit your own custom cooling curves using the interactive editor.",
+            font=("Helvetica", 11),
+            text_color=SUBTEXT,
+            justify="left",
+            wraplength=240
+        )
+        desc_label.pack(anchor="w", padx=16, pady=(8, 12))
+
         # Single button to configure the custom curve
         self._config_btn = ctk.CTkButton(
             section,
@@ -145,7 +156,7 @@ class FanControllerUI:
             border_width=1,
             border_color=BORDER,
         )
-        self._config_btn.pack(fill="x", padx=16, pady=(8, 16))
+        self._config_btn.pack(fill="x", padx=16, pady=(6, 12))
 
     def _build_profiles(self):
         section = ctk.CTkFrame(self.right_col, fg_color=SURFACE, corner_radius=10,
@@ -160,6 +171,7 @@ class FanControllerUI:
             ("MSI Default", self.msi_default_curve),
             ("Silent Mode", self.silent_fan_curve),
             ("Gaming Mode", self.gaming_fan_curve),
+            ("Custom Mode", self.custom_fan_curve_apply),
         ]
 
         for text, cmd in profiles:
@@ -177,7 +189,7 @@ class FanControllerUI:
                 border_width=1,
                 border_color=BORDER,
             )
-            btn.pack(fill="x", padx=16, pady=(4, 4))
+            btn.pack(fill="x", padx=16, pady=(2, 2))
 
     def _build_status(self):
         # Stretched bottom bar for status
@@ -230,6 +242,11 @@ class FanControllerUI:
         print("[UI] Setting gaming fan curve...")
         if self.mode_callback:
             self.mode_callback("gaming_curve")
+
+    def custom_fan_curve_apply(self):
+        print("[UI] Applying custom fan curve...")
+        if self.mode_callback:
+            self.mode_callback("custom_curve")
 
     def custom_fan_curve(self):
         print("[UI] Opening custom curve editor...")
