@@ -3,27 +3,27 @@ import json
 import os
 
 # ==========================================
-# THEME
+# DRACULA & GRAPHITE THEME
 # ==========================================
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
-BG       = "#141417"
-SURFACE  = "#1e1e23"
-BORDER   = "#2e2e38"
-TEXT     = "#e8e8ed"
-SUBTEXT  = "#6c6c80"
-ACCENT   = "#7c6af7"
-ACCENT_H = "#6a59e0"   # hover state
-SUCCESS  = "#4ade80"
-DANGER   = "#f87171"
+BG       = "#282a36"
+SURFACE  = "#21222c"
+BORDER   = "#44475a"
+TEXT     = "#f8f8f2"
+SUBTEXT  = "#6272a4"
+ACCENT   = "#bd93f9"
+ACCENT_H = "#a87ff1"   # hover state
+SUCCESS  = "#50fa7b"
+DANGER   = "#ff5555"
 
-FONT_TITLE  = ("Helvetica", 13)
-FONT_LABEL  = ("Helvetica", 10)
+FONT_TITLE  = ("Helvetica", 13, "bold")
+FONT_LABEL  = ("Helvetica", 10, "bold")
 FONT_METRIC = ("Helvetica", 24, "bold")
 FONT_UNIT   = ("Helvetica", 11)
 FONT_BTN    = ("Helvetica", 12)
-FONT_STATUS = ("Helvetica", 11)
+FONT_STATUS = ("Helvetica", 11, "bold")
 
 
 def _sep(parent):
@@ -68,11 +68,15 @@ class FanControllerUI:
             font=FONT_TITLE, text_color=TEXT
         ).pack(side="left", pady=14)
 
-        self._status_dot = ctk.CTkLabel(
-            bar, text="● offline",
-            font=FONT_LABEL, text_color=DANGER
+        self._status_badge = ctk.CTkLabel(
+            bar, text="OFFLINE",
+            font=FONT_LABEL, text_color=TEXT,
+            fg_color=DANGER,
+            corner_radius=4,
+            width=64,
+            height=20
         )
-        self._status_dot.pack(side="right", pady=14)
+        self._status_badge.pack(side="right", pady=14)
 
     def _build_telemetry(self):
         row = ctk.CTkFrame(self.root, fg_color="transparent")
@@ -83,7 +87,7 @@ class FanControllerUI:
         self._rpm_var  = ctk.StringVar(value="--")
 
         metrics = [
-            ("CPU",  self._temp_var, "°C"),
+            ("CPU",  self._temp_var, "C"),
             ("FAN",  self._fan_var,  "%"),
             ("RPM",  self._rpm_var,  ""),
         ]
@@ -180,10 +184,10 @@ class FanControllerUI:
 
         # each profile is a flat button, left-aligned text, consistent height
         profiles = [
-            ("🏭  MSI Default", self.msi_default_curve),
-            ("🤫  Silent",       self.silent_fan_curve),
-            ("🎮  Gaming",       self.gaming_fan_curve),
-            ("✏️  Custom…",      self.custom_fan_curve),
+            ("MSI Default", self.msi_default_curve),
+            ("Silent",      self.silent_fan_curve),
+            ("Gaming",      self.gaming_fan_curve),
+            ("Custom...",   self.custom_fan_curve),
         ]
 
         for text, cmd in profiles:
@@ -247,17 +251,17 @@ class FanControllerUI:
         # status dot reflects connection state
         is_live = str(temp) not in ("--", "offline", "timeout")
         if is_live:
-            self._status_dot.configure(text="● live", text_color=SUCCESS)
+            self._status_badge.configure(text="LIVE", fg_color=SUCCESS, text_color=SURFACE)
         else:
-            label = str(temp) if str(temp) in ("offline", "timeout") else "offline"
-            self._status_dot.configure(text=f"● {label}", text_color=DANGER)
+            label = str(temp).upper() if str(temp) in ("offline", "timeout") else "OFFLINE"
+            self._status_badge.configure(text=label, fg_color=DANGER, text_color=TEXT)
 
     def show_success(self, message="Done"):
-        self._status_label.configure(text=f"✓  {message}", text_color=SUCCESS)
+        self._status_label.configure(text=message, text_color=SUCCESS)
         self.root.after(2500, lambda: self._status_label.configure(text=""))
 
     def show_error(self, message="Error"):
-        self._status_label.configure(text=f"✕  {message}", text_color=DANGER)
+        self._status_label.configure(text=message, text_color=DANGER)
         self.root.after(2500, lambda: self._status_label.configure(text=""))
 
     # ==========================================
@@ -331,7 +335,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
         body.pack(fill="x", padx=20, pady=16)
 
         # temperature row
-        ctk.CTkLabel(body, text="TEMPERATURE THRESHOLDS (°C)",
+        ctk.CTkLabel(body, text="TEMPERATURE THRESHOLDS (C)",
                      font=FONT_LABEL, text_color=SUBTEXT).grid(row=0, column=0, columnspan=6, sticky="w", pady=(0, 6))
 
         self._temp_vars = []
@@ -408,17 +412,17 @@ class CustomCurveEditor(ctk.CTkToplevel):
             temps  = [int(v.get()) for v in self._temp_vars]
             speeds = [int(v.get()) for v in self._speed_vars]
         except ValueError:
-            self._status.configure(text="✕  Integers only", text_color=DANGER)
+            self._status.configure(text="Integers only", text_color=DANGER)
             return
 
         # temperatures must be strictly ascending
         if temps != sorted(temps):
-            self._status.configure(text="✕  Temps must be ascending", text_color=DANGER)
+            self._status.configure(text="Temps must be ascending", text_color=DANGER)
             return
 
         # speeds must be between 0 and 100
         if any(s < 0 or s > 100 for s in speeds):
-            self._status.configure(text="✕  Speeds: 0–100 only", text_color=DANGER)
+            self._status.configure(text="Speeds: 0–100 only", text_color=DANGER)
             return
 
         try:
@@ -431,9 +435,9 @@ class CustomCurveEditor(ctk.CTkToplevel):
             with open(CONFIG_PATH, "w") as f:
                 json.dump(data, f, indent=2)
 
-            self._status.configure(text="✓  Saved", text_color=SUCCESS)
+            self._status.configure(text="Saved", text_color=SUCCESS)
             # close after a short delay so the user sees the confirmation
             self.after(700, self.destroy)
 
         except Exception as e:
-            self._status.configure(text=f"✕  {e}", text_color=DANGER)
+            self._status.configure(text=f"{e}", text_color=DANGER)

@@ -29,9 +29,9 @@ cat /sys/kernel/security/lockdown
 
 | Output | Meaning |
 |---|---|
-| `[none] integrity confidentiality` | ✅ Unlocked — you can proceed |
-| `none [integrity] confidentiality` | ❌ Locked — disable Secure Boot |
-| `none integrity [confidentiality]` | ❌ Locked — disable Secure Boot |
+| `[none] integrity confidentiality` | [OK] Unlocked — you can proceed |
+| `none [integrity] confidentiality` | [LOCKED] — disable Secure Boot |
+| `none integrity [confidentiality]` | [LOCKED] — disable Secure Boot |
 
 **If locked:** reboot, enter your BIOS/UEFI (usually `Del`, `F2`, or `F10` at POST), find the **Secure Boot** setting and set it to **Disabled**. Save and reboot.
 
@@ -190,9 +190,9 @@ Once you have a list of changed bytes, you need to tell temperatures from fan sp
 |---|---|---|
 | Value range at idle | 30–60 (°C) | 20–50 (%) |
 | Value range under load | 70–100 | 60–100 |
-| Changes gradually | ✅ Yes | ✅ Yes |
-| Writable (fan responds) | ❌ No | ✅ Yes |
-| Reacts to cooling (fan off) | ✅ Yes | — |
+| Changes gradually | Yes | Yes |
+| Writable (fan responds) | No | Yes |
+| Reacts to cooling (fan off) | Yes | — |
 
 ### Confirming a fan register by writing to it
 
@@ -205,7 +205,7 @@ printf '\x64' | sudo dd of=/sys/kernel/debug/ec/ec0/io bs=1 seek=$((0x71)) conv=
 printf '\x2b' | sudo dd of=/sys/kernel/debug/ec/ec0/io bs=1 seek=$((0x71)) conv=notrunc
 ```
 
-> ⚠️ **Warning:** Do not leave the fan at 0% (`\x00`) for long — the EC will likely reclaim control within seconds, but be careful.
+> **Warning:** Do not leave the fan at 0% (`\x00`) for long — the EC will likely reclaim control within seconds, but be careful.
 
 ### Confirming a temperature register
 
