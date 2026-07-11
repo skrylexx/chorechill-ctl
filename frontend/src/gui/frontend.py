@@ -40,7 +40,7 @@ class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
         self.root.title("chore chill")
-        self.root.geometry("640x330")
+        self.root.geometry("640x310")
         self.root.resizable(False, False)
         self.root.configure(fg_color=BG)
 
@@ -156,7 +156,7 @@ class FanControllerUI:
             border_width=1,
             border_color=BORDER,
         )
-        self._config_btn.pack(fill="x", padx=16, pady=(12, 16))
+        self._config_btn.pack(fill="x", padx=16, pady=(6, 12))
 
     def _build_profiles(self):
         section = ctk.CTkFrame(self.right_col, fg_color=SURFACE, corner_radius=10,
@@ -189,7 +189,7 @@ class FanControllerUI:
                 border_width=1,
                 border_color=BORDER,
             )
-            btn.pack(fill="x", padx=16, pady=(3, 3))
+            btn.pack(fill="x", padx=16, pady=(2, 2))
 
     def _build_status(self):
         # Stretched bottom bar for status
