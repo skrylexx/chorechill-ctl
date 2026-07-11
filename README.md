@@ -163,10 +163,6 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 ---
 
-## ROADMAP
-
-- [ ] Create an interface to let user create his own custom profile by moving points on a curve
-
 ## References
 
 - [MSI WMI Platform — kernel docs](https://docs.kernel.org/wmi/devices/msi-wmi-platform.html)
