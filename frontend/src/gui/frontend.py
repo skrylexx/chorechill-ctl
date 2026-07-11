@@ -18,12 +18,12 @@ ACCENT_H = "#a87ff1"   # hover state
 SUCCESS  = "#50fa7b"
 DANGER   = "#ff5555"
 
-FONT_TITLE  = ("Helvetica", 13, "bold")
-FONT_LABEL  = ("Helvetica", 10, "bold")
-FONT_METRIC = ("Helvetica", 24, "bold")
-FONT_UNIT   = ("Helvetica", 11)
-FONT_BTN    = ("Helvetica", 12)
-FONT_STATUS = ("Helvetica", 11, "bold")
+FONT_TITLE  = ("Helvetica", 15, "bold")
+FONT_LABEL  = ("Helvetica", 11, "bold")
+FONT_METRIC = ("Helvetica", 28, "bold")
+FONT_UNIT   = ("Helvetica", 12)
+FONT_BTN    = ("Helvetica", 13, "bold")
+FONT_STATUS = ("Helvetica", 12, "bold")
 
 
 def _sep(parent):
@@ -37,7 +37,7 @@ class FanControllerUI:
     def __init__(self, root, apply_callback=None, mode_callback=None):
         self.root = root
         self.root.title("chore chill")
-        self.root.geometry("420x680")
+        self.root.geometry("740x450")
         self.root.resizable(False, False)
         self.root.configure(fg_color=BG)
 
@@ -47,10 +47,21 @@ class FanControllerUI:
         self.current_mode   = "auto"
 
         self._build_header()
+        
+        # Main two-column container
+        self.main_container = ctk.CTkFrame(self.root, fg_color="transparent")
+        self.main_container.pack(fill="both", expand=True, padx=20, pady=(10, 0))
+
+        # Left Column (Telemetry + Fan Control)
+        self.left_col = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        self.left_col.pack(side="left", fill="both", expand=True, padx=(0, 10))
+
+        # Right Column (Profiles)
+        self.right_col = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        self.right_col.pack(side="right", fill="both", expand=True, padx=(10, 0))
+
         self._build_telemetry()
-        _sep(self.root)
         self._build_fan_control()
-        _sep(self.root)
         self._build_profiles()
         self._build_status()
 
@@ -59,28 +70,28 @@ class FanControllerUI:
     # ==========================================
 
     def _build_header(self):
-        bar = ctk.CTkFrame(self.root, fg_color="transparent", height=48)
-        bar.pack(fill="x", padx=20)
+        bar = ctk.CTkFrame(self.root, fg_color="transparent", height=50)
+        bar.pack(fill="x", padx=20, pady=(10, 0))
         bar.pack_propagate(False)
 
         ctk.CTkLabel(
             bar, text="chore chill",
             font=FONT_TITLE, text_color=TEXT
-        ).pack(side="left", pady=14)
+        ).pack(side="left", pady=12)
 
         self._status_badge = ctk.CTkLabel(
             bar, text="OFFLINE",
             font=FONT_LABEL, text_color=TEXT,
             fg_color=DANGER,
             corner_radius=4,
-            width=64,
-            height=20
+            width=80,
+            height=24
         )
-        self._status_badge.pack(side="right", pady=14)
+        self._status_badge.pack(side="right", pady=12)
 
     def _build_telemetry(self):
-        row = ctk.CTkFrame(self.root, fg_color="transparent")
-        row.pack(fill="x", padx=20, pady=(4, 16))
+        row = ctk.CTkFrame(self.left_col, fg_color="transparent")
+        row.pack(fill="x", pady=(0, 12))
 
         self._temp_var = ctk.StringVar(value="--")
         self._fan_var  = ctk.StringVar(value="--")
@@ -100,7 +111,7 @@ class FanControllerUI:
 
             # value + unit on the same line
             val_row = ctk.CTkFrame(cell, fg_color="transparent")
-            val_row.pack(pady=(14, 2))
+            val_row.pack(pady=(12, 2))
             ctk.CTkLabel(val_row, textvariable=var,
                          font=FONT_METRIC, text_color=TEXT).pack(side="left")
             if unit:
@@ -108,14 +119,15 @@ class FanControllerUI:
                              font=FONT_UNIT, text_color=SUBTEXT).pack(side="left", padx=(2, 0))
 
             ctk.CTkLabel(cell, text=label,
-                         font=FONT_LABEL, text_color=SUBTEXT).pack(pady=(0, 12))
+                         font=FONT_LABEL, text_color=SUBTEXT).pack(pady=(0, 10))
 
     def _build_fan_control(self):
-        section = ctk.CTkFrame(self.root, fg_color="transparent")
-        section.pack(fill="x", padx=20, pady=(16, 14))
+        section = ctk.CTkFrame(self.left_col, fg_color=SURFACE, corner_radius=10,
+                               border_width=1, border_color=BORDER, padding=16)
+        section.pack(fill="both", expand=True, pady=(0, 10))
 
         ctk.CTkLabel(section, text="FAN CONTROL",
-                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", pady=(0, 10))
+                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", pady=(0, 8))
 
         # Auto / Manual toggle
         self._seg = ctk.CTkSegmentedButton(
@@ -123,17 +135,18 @@ class FanControllerUI:
             values=["Auto", "Manual"],
             command=self._on_mode_change,
             font=FONT_BTN,
-            fg_color=SURFACE,
+            fg_color=BG,
             selected_color=ACCENT,
             selected_hover_color=ACCENT_H,
-            unselected_color=SURFACE,
+            selected_text_color=BG,       # dark text on light accent background
+            unselected_color=BG,
             unselected_hover_color=BORDER,
             text_color=TEXT,
             corner_radius=8,
             border_width=1,
         )
         self._seg.set("Auto")
-        self._seg.pack(fill="x", pady=(0, 14))
+        self._seg.pack(fill="x", pady=(0, 10))
 
         # slider
         self._slider_var = ctk.IntVar(value=50)
@@ -145,7 +158,7 @@ class FanControllerUI:
             button_color=ACCENT,
             button_hover_color=ACCENT_H,
             progress_color=ACCENT,
-            fg_color=BORDER,
+            fg_color=BG,
             state="disabled",
             height=16,
             corner_radius=6,
@@ -157,7 +170,7 @@ class FanControllerUI:
             section, text="Target: 50%",
             font=FONT_LABEL, text_color=SUBTEXT
         )
-        self._slider_label.pack(pady=(4, 12))
+        self._slider_label.pack(pady=(2, 8))
 
         # apply button
         self._apply_btn = ctk.CTkButton(
@@ -170,17 +183,18 @@ class FanControllerUI:
             state="disabled",
             corner_radius=8,
             height=36,
-            text_color=TEXT,
+            text_color=BG,               # dark text on light accent background
             border_width=0,
         )
         self._apply_btn.pack(fill="x")
 
     def _build_profiles(self):
-        section = ctk.CTkFrame(self.root, fg_color="transparent")
-        section.pack(fill="x", padx=20, pady=(16, 0))
+        section = ctk.CTkFrame(self.right_col, fg_color=SURFACE, corner_radius=10,
+                               border_width=1, border_color=BORDER, padding=16)
+        section.pack(fill="both", expand=True, pady=(0, 10))
 
         ctk.CTkLabel(section, text="PROFILES",
-                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", pady=(0, 10))
+                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", pady=(0, 8))
 
         # each profile is a flat button, left-aligned text, consistent height
         profiles = [
@@ -196,7 +210,7 @@ class FanControllerUI:
                 text=text,
                 anchor="w",             # left-align label
                 command=cmd,
-                fg_color=SURFACE,
+                fg_color=BG,
                 hover_color=BORDER,
                 font=FONT_BTN,
                 text_color=TEXT,
@@ -205,14 +219,15 @@ class FanControllerUI:
                 border_width=1,
                 border_color=BORDER,
             )
-            btn.pack(fill="x", pady=(0, 6))
+            btn.pack(fill="x", pady=(0, 8))
 
     def _build_status(self):
+        # Stretched bottom bar for status
         self._status_label = ctk.CTkLabel(
             self.root, text="",
             font=FONT_STATUS, text_color=SUCCESS
         )
-        self._status_label.pack(pady=(8, 12))
+        self._status_label.pack(pady=(0, 10))
 
     # ==========================================
     # EVENT HANDLERS
@@ -315,7 +330,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Custom Curve")
-        self.geometry("500x340")
+        self.geometry("520x360")
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.grab_set()
@@ -347,7 +362,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
             ctk.CTkLabel(inner, text=f"T{i+1}", font=FONT_LABEL, text_color=SUBTEXT).pack(pady=(6, 0))
             var = ctk.StringVar(value=str(val))
             ctk.CTkEntry(inner, textvariable=var, width=46,
-                         font=("Helvetica", 13), justify="center",
+                         font=("Helvetica", 13, "bold"), justify="center",
                          fg_color="transparent", border_width=0,
                          text_color=TEXT).pack(pady=(0, 6))
             self._temp_vars.append(var)
@@ -368,7 +383,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
             ctk.CTkLabel(inner, text=f"S{i+1}", font=FONT_LABEL, text_color=SUBTEXT).pack(pady=(6, 0))
             var = ctk.StringVar(value=str(val))
             ctk.CTkEntry(inner, textvariable=var, width=40,
-                         font=("Helvetica", 13), justify="center",
+                         font=("Helvetica", 13, "bold"), justify="center",
                          fg_color="transparent", border_width=0,
                          text_color=TEXT).pack(pady=(0, 6))
             self._speed_vars.append(var)
@@ -390,7 +405,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
 
         ctk.CTkButton(footer, text="Save & Apply", command=self._on_save,
                       fg_color=ACCENT, hover_color=ACCENT_H,
-                      text_color=TEXT, font=FONT_BTN,
+                      text_color=BG, font=FONT_BTN,           # dark text on light accent background
                       width=110, height=34, corner_radius=8).pack(side="right")
 
     def _load_custom_defaults(self):
