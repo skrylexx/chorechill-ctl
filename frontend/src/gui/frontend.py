@@ -131,6 +131,17 @@ class FanControllerUI:
         ctk.CTkLabel(section, text="FAN CONTROL",
                      font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(12, 4))
 
+        # Helpful descriptive label to balance the height and fill vertical space
+        desc_label = ctk.CTkLabel(
+            section,
+            text="Create and edit your own custom cooling curves using the interactive editor.",
+            font=("Helvetica", 11),
+            text_color=SUBTEXT,
+            justify="left",
+            wraplength=240
+        )
+        desc_label.pack(anchor="w", padx=16, pady=(8, 12))
+
         # Single button to configure the custom curve
         self._config_btn = ctk.CTkButton(
             section,
@@ -145,7 +156,7 @@ class FanControllerUI:
             border_width=1,
             border_color=BORDER,
         )
-        self._config_btn.pack(fill="x", padx=16, pady=(20, 20), expand=True)
+        self._config_btn.pack(fill="x", padx=16, pady=(12, 16))
 
     def _build_profiles(self):
         section = ctk.CTkFrame(self.right_col, fg_color=SURFACE, corner_radius=10,
