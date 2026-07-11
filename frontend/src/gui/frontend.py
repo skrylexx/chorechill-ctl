@@ -18,6 +18,7 @@ ACCENT   = "#bd93f9"
 ACCENT_H = "#a87ff1"   # hover state
 SUCCESS  = "#50fa7b"
 DANGER   = "#ff5555"
+CYAN     = "#8be9fd"
 
 FONT_TITLE  = ("Helvetica", 15, "bold")
 FONT_LABEL  = ("Helvetica", 11, "bold")
@@ -259,37 +260,36 @@ class CustomCurveEditor(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Configure Custom Mode")
-        self.geometry("760x460")
+        self.geometry("760x480")
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.grab_set()
 
-        # Canvas boundaries
+        # Canvas boundaries (height adjusted to fit the bottom legend)
         self.margin_left = 50
         self.margin_right = 30
         self.margin_top = 30
-        self.margin_bottom = 50
+        self.margin_bottom = 70
         self.plot_w = 760 - self.margin_left - self.margin_right
-        self.plot_h = 360 - self.margin_top - self.margin_bottom
+        self.plot_h = 370 - self.margin_top - self.margin_bottom
 
         defaults = self._load_custom_defaults()
 
         # Build self.points (7 points) from defaults:
-        # P0 is fixed at temp=25 (start threshold), adjustable in speed (S0).
+        # P0 is fully adjustable in X and Y (starts at 25 C by default).
         # P1..P6 correspond to temperatures_c[0..5] and speeds_percent[1..6].
         # We ensure temperatures are loaded with 25 C minimum.
         self.points = []
         
         # P0 starting speed S[0]
-        self.points.append({"temp": 25, "speed": defaults["speeds_percent"][0], "fixed_x": True})
+        self.points.append({"temp": 25, "speed": defaults["speeds_percent"][0]})
         
         # P1..P6 representing thresholds T[0..5] and speeds S[1..6]
         for i in range(6):
             t_val = max(26 + i, defaults["temperatures_c"][i])  # enforce strictly ascending above 25 C
             self.points.append({
                 "temp": t_val,
-                "speed": defaults["speeds_percent"][i + 1],
-                "fixed_x": False
+                "speed": defaults["speeds_percent"][i + 1]
             })
 
         self.dragged_point_idx = None
@@ -319,7 +319,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
         self.canvas = ctk.CTkCanvas(
             self.canvas_frame,
             width=720,
-            height=300,
+            height=310,
             bg=BG,
             highlightthickness=0
         )
@@ -439,8 +439,12 @@ class CustomCurveEditor(ctk.CTkToplevel):
             x = self._temp_to_x(p["temp"])
             y = self._speed_to_y(p["speed"])
             
-            # Determine color and size (active point glows in green)
-            color = SUCCESS if idx == self.dragged_point_idx else ACCENT
+            # Determine color and size: P0 (Idle speed) is Cyan, P1..P6 are Purple
+            if idx == 0:
+                color = SUCCESS if idx == self.dragged_point_idx else CYAN
+            else:
+                color = SUCCESS if idx == self.dragged_point_idx else ACCENT
+                
             r_outer = 7
             r_inner = 4
             
@@ -448,6 +452,17 @@ class CustomCurveEditor(ctk.CTkToplevel):
             self.canvas.create_oval(x - r_outer, y - r_outer, x + r_outer, y + r_outer, fill=BORDER, outline="")
             # Inner circle
             self.canvas.create_oval(x - r_inner, y - r_inner, x + r_inner, y + r_inner, fill=color, outline="")
+
+        # 5. Legend at the bottom center of the canvas area
+        legend_y = self.margin_top + self.plot_h + 38
+        
+        # P0 Cyan Indicator
+        self.canvas.create_oval(190 - 4, legend_y - 4, 190 + 4, legend_y + 4, fill=CYAN, outline="")
+        self.canvas.create_text(202, legend_y, text="Base Speed (S0, temp < T0)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
+        
+        # P1..P6 Purple Indicator
+        self.canvas.create_oval(410 - 4, legend_y - 4, 410 + 4, legend_y + 4, fill=ACCENT, outline="")
+        self.canvas.create_text(422, legend_y, text="Temperature Thresholds (T0-T5 / S1-S6)", fill=TEXT, font=("Helvetica", 9, "bold"), anchor="w")
 
     def _on_canvas_click(self, event):
         # Find closest point
@@ -476,12 +491,20 @@ class CustomCurveEditor(ctk.CTkToplevel):
         new_speed = int(self._y_to_speed(event.y))
         p["speed"] = max(0, min(100, new_speed))
 
-        # Drag horizontal (Temperature)
-        if not p["fixed_x"]:
-            # Clamp between previous point and next point to maintain ascending order
+        # Drag horizontal (Temperature) - now P0 is also draggable horizontally!
+        if idx == 0:
+            min_temp = 25
+            max_temp = self.points[1]["temp"] - 1
+            new_temp = int(self._x_to_temp(event.x))
+            p["temp"] = max(min_temp, min(max_temp, new_temp))
+        elif idx < 6:
             min_temp = self.points[idx - 1]["temp"] + 1
-            max_temp = self.points[idx + 1]["temp"] - 1 if idx < 6 else 95
-            
+            max_temp = self.points[idx + 1]["temp"] - 1
+            new_temp = int(self._x_to_temp(event.x))
+            p["temp"] = max(min_temp, min(max_temp, new_temp))
+        else:  # idx == 6
+            min_temp = self.points[5]["temp"] + 1
+            max_temp = 95
             new_temp = int(self._x_to_temp(event.x))
             p["temp"] = max(min_temp, min(max_temp, new_temp))
 
