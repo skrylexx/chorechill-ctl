@@ -261,7 +261,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Configure Custom Mode")
-        self.geometry("800x520") # larger horizontal window as requested
+        self.geometry("800x520")
         self.resizable(False, False)
         self.configure(fg_color=BG)
         self.grab_set()
@@ -337,7 +337,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
 
         _sep(self)
 
-        # Footer Area (larger buttons as requested: height 38)
+        # Footer Area (even larger buttons as requested: height 42)
         footer = ctk.CTkFrame(self, fg_color="transparent", height=50)
         footer.pack(fill="x", padx=20, pady=(5, 10))
         footer.pack_propagate(False)
@@ -348,13 +348,13 @@ class CustomCurveEditor(ctk.CTkToplevel):
         ctk.CTkButton(footer, text="Cancel", command=self.destroy,
                       fg_color=SURFACE, hover_color=BORDER,
                       text_color=TEXT, font=FONT_BTN,
-                      width=100, height=38, corner_radius=8,
-                      border_width=1, border_color=BORDER).pack(side="right", padx=(6, 0), pady=6)
+                      width=120, height=42, corner_radius=8,
+                      border_width=1, border_color=BORDER).pack(side="right", padx=(6, 0), pady=4)
 
         ctk.CTkButton(footer, text="Save & Apply", command=self._on_save,
                       fg_color=ACCENT, hover_color=ACCENT_H,
                       text_color=BG, font=FONT_BTN,
-                      width=130, height=38, corner_radius=8).pack(side="right", pady=6)
+                      width=150, height=42, corner_radius=8).pack(side="right", pady=4)
 
         self._update_recap()
         self._draw_graph()
@@ -407,7 +407,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
         for p in self.points:
             coords.append((self._temp_to_x(p["temp"]), self._speed_to_y(p["speed"])))
 
-        # 1. Polish: Draw glowing area under the curve (filled polygon using Dracula palette)
+        # 1. Polish: Draw glowing area under the curve (more transparent, very close to BG #282a36)
         poly_coords = []
         poly_coords.append(self.margin_left)
         poly_coords.append(self.margin_top + self.plot_h)
@@ -416,8 +416,8 @@ class CustomCurveEditor(ctk.CTkToplevel):
             poly_coords.append(cy)
         poly_coords.append(coords[-1][0])
         poly_coords.append(self.margin_top + self.plot_h)
-        # Soft fill color blending nicely with the dark background
-        self.canvas.create_polygon(poly_coords, fill="#352e4f", outline="")
+        # Soft dark violet fill that is highly transparent/muted
+        self.canvas.create_polygon(poly_coords, fill="#2e2a3c", outline="")
 
         # 2. Polish: Draw thin vertical dashed projection lines down to the X-axis for each point
         for idx, p in enumerate(self.points):
@@ -436,9 +436,9 @@ class CustomCurveEditor(ctk.CTkToplevel):
                     font=("Helvetica", 10, "bold")
                 )
 
-        # 3. Polish: Draw the main curve line (thick purple accent line)
+        # 3. Polish: Draw the main curve line (thinner 2px line for a sharper/cleaner look)
         for i in range(1, len(coords)):
-            self.canvas.create_line(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1], fill=ACCENT, width=3)
+            self.canvas.create_line(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1], fill=ACCENT, width=2)
 
         # 4. Polish: Draw points with clean circular joints and high-contrast outer rings
         # Color coding: S0 baseline is Green (SUCCESS), Thresholds T0-T5 are Orange (ORANGE)
@@ -462,7 +462,7 @@ class CustomCurveEditor(ctk.CTkToplevel):
             # Inner circle
             self.canvas.create_oval(x - r_inner, y - r_inner, x + r_inner, y + r_inner, fill=color, outline="")
 
-        # 5. English Legend at the bottom center of the canvas area (larger text: font size 10)
+        # 5. English Legend at the bottom center of the canvas area
         legend_y = self.margin_top + self.plot_h + 45
         
         # P0 Green Indicator
