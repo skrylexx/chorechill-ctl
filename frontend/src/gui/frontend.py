@@ -123,11 +123,11 @@ class FanControllerUI:
 
     def _build_fan_control(self):
         section = ctk.CTkFrame(self.left_col, fg_color=SURFACE, corner_radius=10,
-                               border_width=1, border_color=BORDER, padding=16)
+                               border_width=1, border_color=BORDER)
         section.pack(fill="both", expand=True, pady=(0, 10))
 
         ctk.CTkLabel(section, text="FAN CONTROL",
-                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", pady=(0, 8))
+                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(16, 8))
 
         # Auto / Manual toggle
         self._seg = ctk.CTkSegmentedButton(
@@ -138,7 +138,6 @@ class FanControllerUI:
             fg_color=BG,
             selected_color=ACCENT,
             selected_hover_color=ACCENT_H,
-            selected_text_color=BG,       # dark text on light accent background
             unselected_color=BG,
             unselected_hover_color=BORDER,
             text_color=TEXT,
@@ -146,7 +145,7 @@ class FanControllerUI:
             border_width=1,
         )
         self._seg.set("Auto")
-        self._seg.pack(fill="x", pady=(0, 10))
+        self._seg.pack(fill="x", padx=16, pady=(0, 10))
 
         # slider
         self._slider_var = ctk.IntVar(value=50)
@@ -164,7 +163,7 @@ class FanControllerUI:
             corner_radius=6,
             button_corner_radius=6,
         )
-        self._slider.pack(fill="x")
+        self._slider.pack(fill="x", padx=16)
 
         self._slider_label = ctk.CTkLabel(
             section, text="Target: 50%",
@@ -186,15 +185,15 @@ class FanControllerUI:
             text_color=BG,               # dark text on light accent background
             border_width=0,
         )
-        self._apply_btn.pack(fill="x")
+        self._apply_btn.pack(fill="x", padx=16, pady=(0, 16))
 
     def _build_profiles(self):
         section = ctk.CTkFrame(self.right_col, fg_color=SURFACE, corner_radius=10,
-                               border_width=1, border_color=BORDER, padding=16)
+                               border_width=1, border_color=BORDER)
         section.pack(fill="both", expand=True, pady=(0, 10))
 
         ctk.CTkLabel(section, text="PROFILES",
-                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", pady=(0, 8))
+                     font=FONT_LABEL, text_color=SUBTEXT).pack(anchor="w", padx=16, pady=(16, 8))
 
         # each profile is a flat button, left-aligned text, consistent height
         profiles = [
@@ -219,7 +218,7 @@ class FanControllerUI:
                 border_width=1,
                 border_color=BORDER,
             )
-            btn.pack(fill="x", pady=(0, 8))
+            btn.pack(fill="x", padx=16, pady=(0, 8))
 
     def _build_status(self):
         # Stretched bottom bar for status
