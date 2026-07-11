@@ -6,6 +6,13 @@
 
 Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/debug/ec/ec0/io` to read CPU temperature and control fan speed at a low level.
 
+> [!NOTE]
+> **TL;DR**
+> - **What:** Low-level fan speed control daemon for Linux (specifically MSI GF63 Thin).
+> - **How:** C background daemon (`chorechill-ctl`) rewrites EC registers; Python GUI (`chorechill`) controls it via a UNIX socket.
+> - **Prerequisites:** Secure Boot **disabled** (kernel lockdown off) + `ec_sys` module loaded.
+> - **Setup:** Run `sudo bash install.sh` to compile, register the systemd service, and install the launcher.
+
 ---
 
 ## Architecture
