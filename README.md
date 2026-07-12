@@ -4,14 +4,14 @@
 
 ![Chore Chill Preview](readme_img/main_page.png)
 
-Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/debug/ec/ec0/io` to read CPU temperature and control fan speed at a low level.
+Controls fan speed by writing directly to the **Embedded Controller (EC)** via `/sys/kernel/debug/ec/ec0/io`. CPU temperature is read from the kernel thermal subsystem (`/sys/class/thermal/`) with EC as fallback.
 
 > [!NOTE]
 > **TL;DR**
-> - **What:** Low-level fan speed control daemon for Linux.
-> - **How:** Modular C background daemon (`chorechill-ctl`) loading hardware-specific driver plugins; Python GUI (`chorechill`) controls it via UNIX socket.
-> - **Prerequisites:** Secure Boot **disabled** (kernel lockdown off) + `ec_sys` module loaded.
-> - **Setup:** Install the pre-built `.deb` package (or run the legacy `sudo bash install.sh` during transition).
+> - **What:** Modular fan control daemon for Linux laptops.
+> - **How:** C daemon (`chorechill-ctl`) loads a hardware-specific driver plugin at startup; Python GUI (`chorechill`) controls it via a UNIX socket.
+> - **Prerequisites:** Secure Boot **disabled** (kernel lockdown off) + `ec_sys` module loaded with write support.
+> - **Setup:** Install the `.deb` package. The installer detects your motherboard and activates the right plugin automatically.
 
 ---
 
@@ -20,7 +20,7 @@ Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/deb
 - [Architecture](#architecture)
 - [IPC Protocol](#ipc-protocol)
 - [Prerequisites](#prerequisites)
-- [Setup & Running](#setup--running)
+- [Setup & Installation](#setup--installation)
 - [How EC Addresses Were Found](#how-ec-addresses-were-found)
 - [Compatibility](#compatibility)
 - [Roadmap](#roadmap)
@@ -32,32 +32,43 @@ Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/deb
 
 ```
 chorechill-ctl/
-├── install.sh                      # Deployment, compilation & wrapper setup (run as root)
-├── Makefile                        # C build automation
+├── debian/                         # Debian packaging metadata
+│   ├── control                     # Package name, deps, description
+│   ├── rules                       # Build rules (debhelper)
+│   ├── postinst                    # Post-install: ec_sys config, detection, systemd
+│   ├── prerm / postrm              # Pre/post removal cleanup
+│   └── changelog                   # Package version history
+├── Makefile                        # Targets: all / plugins / detect / deb / clean
 ├── README.md                       # You are here
 ├── How2Get_Good_Addresses.md       # EC investigation guide (hexdump method)
 ├── config/
 │   ├── profiles.json               # Fan curve profiles (default, silent, gaming, custom)
 │   └── chorechill-ctl.service      # Systemd unit file (reference copy)
-├── backend/                        # C daemon (runs as root, talks to EC)
+├── backend/
+│   ├── detect/
+│   │   └── chorechill-detect.c     # Reads /sys/class/dmi/id/ and outputs the right plugin name
 │   ├── include/
-│   │   ├── hardware.h              # Signatures for EC I/O (/sys/kernel/debug/ec/ec0/io)
-│   │   ├── ipc.h                   # Signatures for UNIX socket IPC
-│   │   └── profiles.h              # Signatures for profile parsing
-│   ├── compiled/                   # Output directory for built binaries
+│   │   ├── driver_plugin.h         # Plugin API struct (contract all plugins must implement)
+│   │   ├── plugin_loader.h         # load_plugin() / unload_plugin() declarations
+│   │   ├── ipc.h                   # UNIX socket IPC declarations
+│   │   └── profiles.h              # Fan curve profile parser declarations
+│   ├── plugins/
+│   │   └── msi_modern/
+│   │       └── plugin_msi_modern.c # EC driver for MSI GF63 Thin / MS-16R4, MS-16R5
+│   ├── compiled/                   # Output directory for built daemon binary
 │   └── src/
-│       ├── main.c                  # Entrypoint : main loop + SIGINT/SIGTERM handler
-│       ├── hardware.c              # Reads CPU temp / writes fan speed via EC
-│       ├── ipc.c                   # UNIX socket server, routes commands to hardware/profiles
-│       └── profiles.c              # Parses SET_CURVE payload and writes curve to EC
+│       ├── main.c                  # Daemon entrypoint: plugin selection, main loop
+│       ├── plugin_loader.c         # dlopen/dlsym runtime plugin loader
+│       ├── ipc.c                   # UNIX socket server, routes commands to plugin
+│       └── profiles.c              # Parses SET_CURVE payload, calls plugin->apply_custom_curve()
 └── frontend/                       # Python GUI (runs as regular user)
-    ├── requirements.txt            # Python dependencies
+    ├── requirements.txt
     └── src/
-        ├── main.py                 # Entrypoint : wires IPC + UI + telemetry polling
+        ├── main.py                 # Entrypoint: wires IPC + UI + telemetry polling
         ├── gui/
         │   └── frontend.py         # Main window + CustomCurveEditor popup (customtkinter)
         └── ipc/
-            └── main.py             # UNIX socket client : talks to C daemon
+            └── main.py             # UNIX socket client: talks to C daemon
 ```
 
 ---
@@ -68,13 +79,13 @@ The frontend and daemon communicate over a UNIX socket at `/tmp/chorechill-ctl.s
 
 | Command | Direction | Description |
 |---|---|---|
-| `GET` | frontend --> daemon | Poll current telemetry |
-| `SET:<pct>` | frontend --> daemon | Lock fan at `<pct>`%: daemon keeps re-writing every 100 ms to hold the EC |
-| `SET_CURVE:<t1,...,t6>;<s1,...,s7>` | frontend --> daemon | Push a fan curve into EC registers; EC runs it autonomously, re-write loop stops |
+| `GET` | frontend -> daemon | Poll current telemetry |
+| `SET:<pct>` | frontend -> daemon | Lock fan at `<pct>`%: daemon keeps re-writing every 100 ms to hold the EC |
+| `SET_CURVE:<t1,...,t6>;<s1,...,s7>` | frontend -> daemon | Push a fan curve into EC registers; EC runs it autonomously, re-write loop stops |
 
 All commands return `<temp_c>,<fan_pct>,<rpm>` as the response.
 
-> **Why the re-write loop?** The EC has its own thermal algorithm. Writing once to the fan speed register (`0x71`) only works for a few seconds because the EC overrides it. The daemon re-writes every 100 ms to hold manual mode. `SET_CURVE` writes to the curve registers (`0x6A–0x78`) which the EC enforces autonomously, so no re-write is needed.
+> **Why the re-write loop?** The EC has its own thermal algorithm. Writing once to the fan speed register (`0x71`) only works for a few seconds because the EC overrides it. The daemon re-writes every 100 ms to hold manual mode. `SET_CURVE` writes to the curve registers (`0x6A-0x78`) which the EC enforces autonomously, so no re-write is needed.
 
 ---
 
@@ -83,66 +94,61 @@ All commands return `<temp_c>,<fan_pct>,<rpm>` as the response.
 - Linux with `ec_sys` kernel module available
 - **Secure Boot must be disabled** (otherwise kernel lockdown blocks EC access)
 - Python 3 + `python3-tk`
-- GCC
+- GCC + `libcjson-dev`
 
 Verify Secure Boot / lockdown status:
 ```bash
 cat /sys/kernel/security/lockdown
-# [none]  --> OK
-# [integrity] or [confidentiality] --> disable Secure Boot in BIOS first
+# [none]  -> OK
+# [integrity] or [confidentiality] -> disable Secure Boot in BIOS first
 ```
 
 ---
 
 ## Setup & Installation
 
-We are moving away from raw `install.sh` scripts towards a secure, standard Debian package (`.deb`) distribution.
+### Option A: Debian Package (Recommended)
 
-### Option A: Installing via Debian Package (Recommended)
-
-To build and install the native Debian package (which sets up Python dependencies, systemd services, permissions, and performs hardware configuration/driver probing automatically):
+The `.deb` installer handles everything: dependencies, `ec_sys` configuration, motherboard detection, and systemd service registration.
 
 ```bash
-# Build the Debian package
+# Build the package
 make deb
 
-# Install it
+# Install
 sudo dpkg -i chorechill-ctl_*.deb
-sudo apt-get install -f  # Fix any missing dependencies
+sudo apt-get install -f
 ```
 
-### Option B: Legacy Installation (Development)
+During installation, `chorechill-detect` reads your DMI tables and automatically selects the correct driver plugin for your motherboard.
 
-Run the old install script if building on a non-Debian system:
+### Option B: Manual Build (Development)
 
 ```bash
+# Compile daemon, plugins, and detect utility
+make all
+make plugins
+make detect
+
+# Then run the legacy installer
 sudo bash install.sh
 ```
 
-### Running the Client GUI
-
-Once installed, simply start the graphical application from any terminal:
+### Running the GUI
 
 ```bash
 chorechill
 ```
 
-You can select standard cooling profiles or visually design a tailored profile using the interactive **Custom Curve Editor** (adjusting 7 temperature thresholds and fan speeds dynamically):
+You can select standard cooling profiles or design a custom fan curve using the **Custom Curve Editor**:
 
 ![Custom Curve Editor](readme_img/custom_page.png)
 
-### Managing the C Daemon (Systemd)
-
-The background control daemon is registered as a systemd service. You can control it using standard systemd commands:
+### Managing the Daemon (Systemd)
 
 ```bash
-# Check service logs and status
 sudo systemctl status chorechill-ctl
-
-# Restart the service
 sudo systemctl restart chorechill-ctl
-
-# Stop the service
 sudo systemctl stop chorechill-ctl
 ```
 
@@ -150,39 +156,37 @@ sudo systemctl stop chorechill-ctl
 
 ## How EC Addresses Were Found
 
-The Embedded Controller (EC) exposes 256 bytes of RAM at `/sys/kernel/debug/ec/ec0/io`.
+The Embedded Controller exposes 256 bytes of RAM at `/sys/kernel/debug/ec/ec0/io`.
 
 ### Method: hexdump differential analysis
 
 ```bash
-# Take a baseline snapshot (idle, fans quiet)
+# Baseline snapshot (idle, fans quiet)
 sudo hexdump -C /sys/kernel/debug/ec/ec0/io > idle.txt
 
-# Trigger load to spin up fans (e.g. launch a heavy Docker stack)
-# Then snapshot again
+# Trigger load (e.g. a heavy compile or Docker stack)
 sudo hexdump -C /sys/kernel/debug/ec/ec0/io > load.txt
 
 # Compare
 diff idle.txt load.txt
 ```
 
-Bytes that spike under load --> fan speed registers.  
-Bytes that increase with heat --> temperature registers.
+Bytes that spike under load -> fan speed registers.
+Bytes that increase with heat -> temperature registers.
 
-> On this machine, fans were deliberately pushed by launching a Docker stack to cause visible peaks in the hexdump, making the fan register easy to identify.
+### Validated addresses (MSI GF63 Thin / MS-16R4)
 
-### Validated addresses (MSI GF63 Thin)
+| Component | Address | Access | Notes |
+|---|---|---|---|
+| CPU Temperature | `0x68` | Read | Fallback only; primary source is `/sys/class/thermal/` |
+| CPU Fan Speed | `0x71` | Read/Write | 0-100 % duty cycle |
+| Fan Curve Temps | `0x6A-0x6F` | Write | 6 temperature thresholds (°C) |
+| Fan Curve Speeds | `0x72-0x78` | Write | 7 speed percentages (%) |
+| Fan Mode | `0xF4` | Write | 0 = auto, 1 = manual |
+| GPU Temperature | `0x80` | Read | 0x00 when GPU is in standby |
+| GPU Fan Speed | `0x89` | Read/Write | 0x00 when GPU fan is off |
 
-| Component       | Address | Access     | Example values              |
-|-----------------|---------|------------|------------------------------|
-| CPU Temperature | `0x68`  | Read       | `0x36` (54°C) --> `0x59` (89°C) |
-| CPU Fan Speed   | `0x71`  | Read/Write | `0x2b` (43%) --> `0x64` (100%)  |
-| Fan Curve Temps | `0x6A–0x6F` | Write  | 6 temperature thresholds (°C) |
-| Fan Curve Speeds| `0x72–0x78` | Write  | 7 speed percentages (%)       |
-| GPU Temperature | `0x80`  | Read       | `0x00` (standby)            |
-| GPU Fan Speed   | `0x89`  | Read/Write | `0x00` (off)                |
-
-> **Note:** The EC has its own control loop: writing a curve to `0x6A–0x78` makes the EC enforce it automatically. For a manual lock (`SET:<pct>`), the daemon writes directly to `0x71`.
+> The EC has its own control loop: writing a curve to `0x6A-0x78` makes the EC enforce it automatically. For a manual lock (`SET:<pct>`), the daemon writes directly to `0x71` and keeps re-writing every 100 ms.
 
 For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Addresses.md).
 
@@ -190,26 +194,29 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
 
 ## Compatibility
 
-- **Validated Hardware**: Optimized and tested on the **MSI GF63 Thin** (and other MSI laptops sharing the same motherboard architecture/EC layout).
-- **Other MSI Laptops**: Laptops from different MSI series (e.g., Creator, Raider, Stealth, or other GF/GS models) might have compatible registers, but layouts should be verified first. Note that the RPM calculation formula (`478000 / raw_value`) is MSI-specific.
-- **Other Laptop Brands (ASUS, Lenovo, HP, etc.)**: Not supported out of the box due to vendor-specific EC layouts. If you want to use this daemon on another brand:
-  1. Follow the differential analysis guide in [How2Get_Good_Addresses.md](./How2Get_Good_Addresses.md) to locate your CPU temperature, fan speed control, and curve registers.
-  2. Modify the static register address definitions in [backend/src/hardware.c](./backend/src/hardware.c).
-- **System Prerequisites**:
-  - Requires a Linux kernel with the `ec_sys` module loaded (`write_support=1`).
-  - **Secure Boot must be disabled** in your BIOS/UEFI to prevent kernel lockdown from blocking write operations to `/sys/kernel/debug/ec/ec0/io`.
+- **Validated:** MSI GF63 Thin (MS-16R4, GF63 Thin 10SCXR) — full read/write access confirmed.
+- **Likely compatible:** Other recent MSI GF/GS series sharing the same EC layout (MS-16R5, MS-16S, MS-17E). Run `chorechill-detect` to check.
+- **Other brands:** Not supported out of the box. The plugin architecture makes it straightforward to add new drivers:
+  1. Investigate your EC registers with the [hexdump guide](./How2Get_Good_Addresses.md).
+  2. Implement `driver_plugin_t` in a new `.c` file under `backend/plugins/`.
+  3. Add your board name to the lookup table in `backend/detect/chorechill-detect.c`.
 
 > [!NOTE]
-> We are transitioning `chorechill-ctl` to a plugin-based architecture with DMI-based motherboard auto-detection. See the [ROADMAP.md](./backend/ROADMAP.md) for more details.
+> EC write access requires `ec_sys` loaded with `write_support=1` and Secure Boot disabled.
 
 ---
 
 ## Roadmap
 
-- [x] Create a graphical curve editor allowing users to drag 7 points to configure their custom profile.
-- [ ] Implement system DMI/motherboard configuration auto-detection.
-- [ ] Refactor C hardware/EC interactions into modular dynamic load plugins (`.so` drivers).
-- [ ] Migrate completely to `.deb` package distribution and deprecate `install.sh`.
+- [x] Graphical fan curve editor (7 draggable points).
+- [x] Plugin-based driver architecture (`driver_plugin_t` + `dlopen` loader).
+- [x] CPU temperature via `/sys/class/thermal/` (x86_pkg_temp > acpitz > EC fallback).
+- [x] DMI-based hardware auto-detection (`chorechill-detect`).
+- [x] Full Debian packaging (`debian/` directory, `make deb`).
+- [ ] First signed `.deb` release.
+- [ ] Additional plugins: MSI legacy, ASUS WMI, Lenovo ACPI.
+
+See [backend/ROADMAP.md](./backend/ROADMAP.md) for the detailed technical roadmap.
 
 ---
 

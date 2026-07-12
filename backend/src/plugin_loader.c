@@ -1,5 +1,5 @@
 /*
- * plugin_loader.c — Runtime hardware driver plugin loader for chorechill-ctl.
+ * plugin_loader.c  Runtime hardware driver plugin loader for chorechill-ctl.
  *
  * Uses the POSIX dlopen()/dlsym()/dlclose() API to load a hardware driver
  * plugin (.so) that exports a driver_plugin_t struct under the symbol name
@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <dlfcn.h>          /* dlopen, dlsym, dlclose, dlerror */
 
-#include "plugin_loader.h"  /* our own header */
+#include "../include/plugin_loader.h"
 
 /* Module-level handle returned by dlopen(); NULL when no plugin is loaded. */
 static void           *s_dl_handle = NULL;
@@ -18,14 +18,9 @@ static void           *s_dl_handle = NULL;
 /* Cached pointer to the active driver struct; NULL when unloaded. */
 static driver_plugin_t *s_driver   = NULL;
 
-/* -------------------------------------------------------------------------
+/*
  * load_plugin()
- *
- * 1. dlopen() the shared library at @plugin_path.
- * 2. dlsym() for the CHORECHILL_DRIVER_SYMBOL export.
- * 3. Call driver->init_driver() so the plugin can open the EC device.
- * 4. Return the driver_plugin_t pointer on success, NULL on any error.
- * ------------------------------------------------------------------------- */
+ */
 driver_plugin_t *load_plugin(const char *plugin_path)
 {
     if (!plugin_path) {
@@ -43,9 +38,9 @@ driver_plugin_t *load_plugin(const char *plugin_path)
     dlerror();
 
     /*
-     * RTLD_NOW  — resolve all symbols immediately so we catch missing
+     * RTLD_NOW  - resolve all symbols immediately so we catch missing
      *             dependencies before the daemon enters its main loop.
-     * RTLD_LOCAL — keep plugin symbols private so they do not pollute
+     * RTLD_LOCAL - keep plugin symbols private so they do not pollute
      *              the global symbol table and interfere with other .so files.
      */
     s_dl_handle = dlopen(plugin_path, RTLD_NOW | RTLD_LOCAL);
@@ -102,12 +97,12 @@ driver_plugin_t *load_plugin(const char *plugin_path)
     return driver;
 }
 
-/* -------------------------------------------------------------------------
+/*
  * unload_plugin()
  *
  * Call cleanup_driver() (if a plugin is active) and then dlclose() the
- * handle.  Safe to call multiple times or when nothing is loaded.
- * ------------------------------------------------------------------------- */
+ * handle. Safe to call multiple times or when nothing is loaded.
+ */
 void unload_plugin(void)
 {
     if (!s_dl_handle) {

@@ -1,5 +1,5 @@
 /*
- * ipc.c — Unix-domain socket IPC server for chorechill-ctl.
+ * ipc.c  Unix-domain socket IPC server for chorechill-ctl.
  *
  * Listens on SOCKET_PATH for commands from the GUI frontend.
  * All hardware writes are now routed through the driver plugin pointer
@@ -23,7 +23,7 @@
 
 #include "../include/ipc.h"
 #include "../include/driver_plugin.h" /* driver_plugin_t — hardware calls go through here */
-#include "plugin_loader.h"            /* included for completeness; not called directly here */
+#include "../include/plugin_loader.h"
 #include "../include/profiles.h"      /* apply_profile_from_string() */
 
 #define SOCKET_PATH "/tmp/chorechill-ctl.sock"
@@ -81,14 +81,14 @@ int init_ipc(void)
     return sockfd;
 }
 
-/* -------------------------------------------------------------------------
+/*
  * handle_ipc_client()
  *
- * Accept one pending client connection (non-blocking).  Parse the command
+ * Accept one pending client connection (non-blocking). Parse the command
  * and route hardware writes through @driver instead of the old hardware.h
- * direct calls.  Always reply with the latest telemetry string so the GUI
+ * direct calls. Always reply with the latest telemetry string so the GUI
  * can refresh its display regardless of which command was sent.
- * ------------------------------------------------------------------------- */
+ */
 void handle_ipc_client(int sockfd, int temp, int fan, int rpm,
                         driver_plugin_t *driver)
 {

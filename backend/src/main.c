@@ -1,5 +1,5 @@
 /*
- * main.c — chorechill-ctl daemon entry point (plugin-based architecture).
+ * main.c  chorechill-ctl daemon entry point (plugin-based architecture).
  *
  * Loads a hardware driver plugin (.so) at startup, then runs the
  * main 10 Hz polling loop: every second it reads temperature + fan
@@ -20,7 +20,7 @@
 #include "../include/ipc.h"
 #include "../include/driver_plugin.h"
 #include "../include/profiles.h"
-#include "plugin_loader.h"
+#include "../include/plugin_loader.h"
 
 /* Default plugin path used when neither argv[1] nor $CHORECHILL_PLUGIN is set */
 #define DEFAULT_PLUGIN_PATH "/usr/lib/chorechill-ctl/plugins/plugin_msi_modern.so"
@@ -28,9 +28,7 @@
 /* Global socket fd so the signal handler can close it on shutdown */
 static int g_sockfd = -1;
 
-/* -------------------------------------------------------------------------
- * handle_signal() — graceful shutdown on SIGINT / SIGTERM
- * ------------------------------------------------------------------------- */
+/* Signal handler: graceful shutdown on SIGINT / SIGTERM */
 static void handle_signal(int sig)
 {
     printf("\n[MAIN] Signal %d received, shutting down...\n", sig);
@@ -45,9 +43,7 @@ static void handle_signal(int sig)
     _exit(0);
 }
 
-/* -------------------------------------------------------------------------
- * main()
- * ------------------------------------------------------------------------- */
+/* main() */
 int main(int argc, char *argv[])
 {
     /* ---- Signal handling ---- */
