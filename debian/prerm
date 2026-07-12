@@ -1,0 +1,28 @@
+#!/bin/bash
+# debian/prerm — pre-removal script for chorechill-ctl
+#
+# Called by dpkg before package files are removed from disk.
+# Stops and disables the systemd service so it is not running
+# when the binary and plugin are deleted.
+
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+
+    echo ""
+    echo "=== chorechill-ctl pre-removal ==="
+    echo "Stopping and disabling the fan control daemon..."
+
+    # Stop the service (ignore error if it was never started)
+    systemctl stop    chorechill-ctl 2>/dev/null || true
+
+    # Disable the service so it does not start at next boot
+    systemctl disable chorechill-ctl 2>/dev/null || true
+
+    echo "Service stopped and disabled."
+    echo "==================================="
+    echo ""
+
+fi
+
+#DEBHELPER#

@@ -1,0 +1,15 @@
+chorechill-ctl (0.2.0-1) unstable; urgency=medium
+
+  * Transition to modular plugin-based driver architecture
+  * Add DMI-based hardware auto-detection utility (chorechill-detect)
+  * Add native Debian packaging (.deb) support
+  * Add MSI Modern EC driver plugin (plugin_msi_modern.so)
+  * Deprecate monolithic install.sh in favor of dpkg/apt installation
+
+ -- Alex <alex@chorechill.local>  Sat, 12 Jul 2026 10:00:00 +0200
+
+chorechill-ctl (0.1.0-1) unstable; urgency=low
+
+  * Initial release: MSI GF63 Thin fan control daemon with Python GUI.
+
+ -- Alex <alex@chorechill.local>  Mon, 01 Jan 2026 00:00:00 +0100

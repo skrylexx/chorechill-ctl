@@ -1,0 +1,37 @@
+#!/bin/bash
+# debian/postrm — post-removal script for chorechill-ctl
+#
+# Called by dpkg after the package files have been removed from disk.
+# Cleans up configuration files and kernel module settings that were
+# created by postinst and are not tracked as conffiles by dpkg.
+
+set -e
+
+if [ "$1" = "purge" ]; then
+
+    echo ""
+    echo "=== chorechill-ctl post-removal (purge) ==="
+
+    # Remove the systemd unit file installed by postinst
+    if [ -f /etc/systemd/system/chorechill-ctl.service ]; then
+        rm -f /etc/systemd/system/chorechill-ctl.service
+        systemctl daemon-reload 2>/dev/null || true
+        echo "Removed systemd unit file."
+    fi
+
+    # Remove the ec_sys kernel module configuration
+    rm -f /etc/modprobe.d/ec_sys.conf
+    rm -f /etc/modules-load.d/ec_sys.conf
+    echo "Removed ec_sys module configuration."
+
+    # Remove the runtime configuration directory
+    rm -rf /etc/chorechill-ctl/
+    echo "Removed /etc/chorechill-ctl/."
+
+    echo "Purge complete."
+    echo "==========================================="
+    echo ""
+
+fi
+
+#DEBHELPER#

@@ -1,25 +1,46 @@
-# Backend Development Roadmap
+# Backend Development & Packaging Roadmap
 
-This document outlines the planned architectural improvements for the C daemon (`chorechill-ctl`) to enhance compatibility, flexibility, and automation.
+This document tracks the transition of `chorechill-ctl` from a single-machine script into a modular Linux utility distributed via a Debian package.
 
 ---
 
-## 1. Dynamic Address & Register Detection
-Currently, the EC memory addresses for temperature sensors and fan registers (`0x68`, `0x71`, etc.) are statically defined in [`backend/include/hardware.h`](./include/hardware.h). 
-- [ ] **Implementation Plan**:
-  - Implement a heuristic search/probing sequence on startup to dynamically identify active sensor cells.
-  - Parse local BIOS/WMI interfaces (`/sys/class/wmi/`) to match against known platform models.
-  - Dynamically load register offsets from a runtime configuration template instead of static compilation flags.
+## Done
 
-## 2. Automated Initial Build Calibration
-- [ ] **Implementation Plan**:
-  - Enhance `install.sh` or the C entrypoint to run a calibration phase upon initial installation.
-  - Capture factory-default EC registers values automatically, generating a machine-specific fallback profile (`/etc/chorechill-ctl/factory_defaults.json`) before making any writes.
-  - Validate write permissions and `lockdown` module status programmatically during build compilation tests.
+- [x] Graphical fan curve editor (7 draggable points, custom profile).
+- [x] Define `driver_plugin_t` API (`backend/include/driver_plugin.h`).
+- [x] Implement `plugin_loader.c` — runtime plugin loading via `dlopen`/`dlsym`.
+- [x] Port MSI EC code into first plugin: `backend/plugins/msi_modern/plugin_msi_modern.c`.
+- [x] CPU temperature reading via `/sys/class/thermal/` (x86_pkg_temp > acpitz > EC fallback).
+- [x] DMI-based hardware auto-detection utility: `backend/detect/chorechill-detect.c`.
+- [x] Refactor `main.c`, `ipc.c`, `profiles.c` to route all hardware calls through the driver pointer.
+- [x] Full `debian/` packaging structure (control, changelog, rules, postinst, prerm, postrm).
+- [x] Makefile targets: `all`, `plugins`, `detect`, `deb`, `clean`.
 
-## 3. Cross-Brand & MSI Family Compatibility
-To transition `chorechill-ctl` from a single-machine script to a general-purpose Linux utility:
-- [ ] **Implementation Plan**:
-  - Generalize C register mappings to support wider MSI motherboard revisions (e.g. Creator, Raider, and Stealth series).
-  - Add modular abstraction drivers for other hardware manufacturers that expose similar EC structures under Linux (e.g., ASUS `asus-nb-wmi`, Lenovo `thinkpad_acpi`, HP `hp-wmi`).
-  - Implement a unified configuration parser allowing users to select their laptop brand/model from the frontend to swap register maps dynamically in C.
+---
+
+## Phase 1: Stabilise the MSI Modern Plugin
+
+- [ ] Validate RPM formula (`478000 / raw`) against real measurements on MS-16R4.
+- [ ] Confirm EC register map on MS-16R5 (GF65 Thin) and add to supported hardware list.
+- [ ] Handle the case where the EC file exists but returns zeros (e.g. debugfs not fully mounted).
+- [ ] Add unit for the raw fan timer value to the IPC response so the GUI can choose how to display RPM.
+
+## Phase 2: First Real `.deb` Build
+
+- [ ] Test `make deb` end-to-end on a clean Debian/Ubuntu VM.
+- [ ] Verify `postinst` flow: ec_sys config, `chorechill-detect`, systemd service activation.
+- [ ] Verify `prerm`/`postrm` clean removal.
+- [ ] Sign the package with a GPG key and set up a simple apt repository (GitHub Releases or self-hosted).
+
+## Phase 3: Additional Plugins
+
+- [ ] `plugin_msi_legacy.so`: older MSI EC layouts (pre-2019 GF series).
+- [ ] `plugin_asus_wmi.so`: read/write via `/sys/devices/platform/asus-nb-wmi/` ACPI interface.
+- [ ] `plugin_lenovo_acpi.so`: use `thinkpad_acpi` kernel interface.
+- [ ] Extend `chorechill-detect` lookup table as new plugins are added.
+
+## Phase 4: Safety & Calibration
+
+- [ ] Pre-flight check: detect kernel lockdown (`/sys/kernel/security/lockdown`) and warn the user before attempting EC writes.
+- [ ] On first plugin install, snapshot existing EC registers to `/var/lib/chorechill/ec_defaults.hex` before any writes.
+- [ ] Expose a `--dry-run` flag on the daemon that reads telemetry but never writes to the EC.

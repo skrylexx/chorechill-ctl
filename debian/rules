@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+# debian/rules — debhelper build rules for chorechill-ctl
+#
+# Uses the standard dh(1) sequencer with three overrides:
+#   override_dh_auto_build   — build daemon, plugins, and detection utility
+#   override_dh_auto_install — install all files into the staging tree
+#   override_dh_auto_clean   — delegate cleaning to our Makefile
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	$(MAKE) all
+	$(MAKE) plugins
+	$(MAKE) detect
+
+override_dh_auto_install:
+	# --- daemon binary ---
+	install -D -m 755 backend/compiled/chorechill-ctl \
+	    $(CURDIR)/debian/chorechill-ctl/usr/sbin/chorechill-ctl
+
+	# --- hardware detection utility ---
+	install -D -m 755 backend/detect/chorechill-detect \
+	    $(CURDIR)/debian/chorechill-ctl/usr/bin/chorechill-detect
+
+	# --- MSI Modern hardware driver plugin ---
+	install -D -m 644 backend/plugins/msi_modern/plugin_msi_modern.so \
+	    $(CURDIR)/debian/chorechill-ctl/usr/lib/chorechill-ctl/plugins/plugin_msi_modern.so
+
+	# --- Python GUI frontend sources ---
+	cp -r frontend/src \
+	    $(CURDIR)/debian/chorechill-ctl/usr/share/chorechill-ctl/frontend
+
+	# --- Default fan profile configuration ---
+	install -D -m 644 config/profiles.json \
+	    $(CURDIR)/debian/chorechill-ctl/etc/chorechill-ctl/profiles.json
+
+	# --- GUI launcher wrapper script ---
+	install -D -m 755 /dev/stdin \
+	    $(CURDIR)/debian/chorechill-ctl/usr/bin/chorechill <<'EOF'
+#!/bin/bash
+python3 /usr/share/chorechill-ctl/frontend/main.py "$$@"
+EOF
+
+override_dh_auto_clean:
+	$(MAKE) clean || true

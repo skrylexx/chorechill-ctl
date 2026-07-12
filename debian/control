@@ -1,0 +1,18 @@
+Source: chorechill-ctl
+Section: utils
+Priority: optional
+Maintainer: Alex <alex@chorechill.local>
+Build-Depends: debhelper-compat (= 13), gcc, make, libcjson-dev
+Standards-Version: 4.5.1
+Rules-Requires-Root: no
+
+Package: chorechill-ctl
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python3 (>= 3.8), python3-tk, libcjson1
+Recommends: python3-customtkinter
+Description: Modular fan control daemon for Linux laptops
+ A low-level fan control daemon that communicates directly with the laptop
+ Embedded Controller (EC) via /sys/kernel/debug/ec/ec0/io.
+ .
+ Uses a plugin-based architecture to support different motherboard families.
+ Includes a Python GUI frontend and a hardware detection utility.
