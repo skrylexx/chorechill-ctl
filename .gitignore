@@ -1,5 +1,7 @@
 # Compiled C binaries and objects
 backend/compiled/
+backend/detect/chorechill-detect
+backend/plugins/**/*.so
 *.o
 *.out
 

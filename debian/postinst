@@ -1,0 +1,106 @@
+#!/bin/bash
+# debian/postinst — post-installation script for chorechill-ctl
+#
+# Called by dpkg after the package files have been placed on disk.
+# Responsibilities:
+#   1. Configure the ec_sys kernel module for write access
+#   2. Run the hardware detection utility to select the correct plugin
+#   3. Install and enable the systemd service
+#   4. Print a friendly installation summary
+
+set -e
+
+# Only run on initial installation or re-configuration
+if [ "$1" = "configure" ]; then
+
+    echo ""
+    echo "=== chorechill-ctl post-installation ==="
+
+    # ------------------------------------------------------------------ #
+    # 1. Configure ec_sys kernel module                                   #
+    # ------------------------------------------------------------------ #
+    echo "[1/4] Configuring ec_sys module..."
+
+    # Tell modprobe to always load ec_sys with write_support enabled
+    cat > /etc/modprobe.d/ec_sys.conf <<'EOF'
+# chorechill-ctl: enable write access to the Embedded Controller
+options ec_sys write_support=1
+EOF
+
+    # Ensure the module is loaded automatically at boot
+    cat > /etc/modules-load.d/ec_sys.conf <<'EOF'
+# chorechill-ctl: load ec_sys at boot for EC read/write access
+ec_sys
+EOF
+
+    # Attempt to load the module now (best-effort; may already be loaded)
+    if modprobe ec_sys write_support=1 2>/dev/null; then
+        echo "    ec_sys loaded successfully."
+    else
+        echo "    Warning: could not load ec_sys now (will load at next boot)."
+    fi
+
+    # ------------------------------------------------------------------ #
+    # 2. Hardware auto-detection                                          #
+    # ------------------------------------------------------------------ #
+    echo "[2/4] Running hardware detection..."
+
+    mkdir -p /etc/chorechill-ctl
+
+    # chorechill-detect prints the plugin filename (e.g. plugin_msi_modern.so)
+    # or exits non-zero if the hardware is unsupported.
+    DETECTED_PLUGIN=""
+    if DETECTED_PLUGIN=$(/usr/bin/chorechill-detect 2>/dev/null); then
+        echo "    Detected plugin: ${DETECTED_PLUGIN}"
+        echo "${DETECTED_PLUGIN}" > /etc/chorechill-ctl/active_plugin
+    else
+        echo "    Warning: hardware not recognised — falling back to plugin_msi_modern.so"
+        echo "plugin_msi_modern.so" > /etc/chorechill-ctl/active_plugin
+    fi
+
+    ACTIVE_PLUGIN=$(cat /etc/chorechill-ctl/active_plugin)
+    echo "    Active plugin: ${ACTIVE_PLUGIN}"
+
+    # ------------------------------------------------------------------ #
+    # 3. Install and enable the systemd service                           #
+    # ------------------------------------------------------------------ #
+    echo "[3/4] Configuring systemd service..."
+
+    # Write the unit file, interpolating the selected plugin path
+    cat > /etc/systemd/system/chorechill-ctl.service <<EOF
+[Unit]
+Description=Chore Chill CTL - EC fan control daemon
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/sbin/chorechill-ctl /usr/lib/chorechill-ctl/plugins/$(cat /etc/chorechill-ctl/active_plugin)
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload
+    systemctl enable chorechill-ctl
+    systemctl start  chorechill-ctl || echo "    Warning: service start failed (see journalctl -u chorechill-ctl)"
+
+    # ------------------------------------------------------------------ #
+    # 4. Summary                                                          #
+    # ------------------------------------------------------------------ #
+    echo "[4/4] Installation complete!"
+    echo ""
+    echo "  Daemon binary : /usr/sbin/chorechill-ctl"
+    echo "  Active plugin : /usr/lib/chorechill-ctl/plugins/${ACTIVE_PLUGIN}"
+    echo "  GUI launcher  : /usr/bin/chorechill"
+    echo "  Config dir    : /etc/chorechill-ctl/"
+    echo ""
+    echo "  Run 'chorechill' to open the GUI."
+    echo "  Run 'systemctl status chorechill-ctl' to check the daemon."
+    echo "========================================="
+    echo ""
+
+fi
+
+#DEBHELPER#
