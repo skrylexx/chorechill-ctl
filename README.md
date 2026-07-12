@@ -8,10 +8,10 @@ Communicates directly with the **Embedded Controller (EC)** via `/sys/kernel/deb
 
 > [!NOTE]
 > **TL;DR**
-> - **What:** Low-level fan speed control daemon for Linux (specifically MSI GF63 Thin).
-> - **How:** C background daemon (`chorechill-ctl`) rewrites EC registers; Python GUI (`chorechill`) controls it via a UNIX socket.
+> - **What:** Low-level fan speed control daemon for Linux.
+> - **How:** Modular C background daemon (`chorechill-ctl`) loading hardware-specific driver plugins; Python GUI (`chorechill`) controls it via UNIX socket.
 > - **Prerequisites:** Secure Boot **disabled** (kernel lockdown off) + `ec_sys` module loaded.
-> - **Setup:** Run `sudo bash install.sh` to compile, register the systemd service, and install the launcher.
+> - **Setup:** Install the pre-built `.deb` package (or run the legacy `sudo bash install.sh` during transition).
 
 ---
 
@@ -94,9 +94,26 @@ cat /sys/kernel/security/lockdown
 
 ---
 
-## Setup & Running
+## Setup & Installation
 
-To install, compile, configure, and register the global service and client in one step, run the installer:
+We are moving away from raw `install.sh` scripts towards a secure, standard Debian package (`.deb`) distribution.
+
+### Option A: Installing via Debian Package (Recommended)
+
+To build and install the native Debian package (which sets up Python dependencies, systemd services, permissions, and performs hardware configuration/driver probing automatically):
+
+```bash
+# Build the Debian package
+make deb
+
+# Install it
+sudo dpkg -i chorechill-ctl_*.deb
+sudo apt-get install -f  # Fix any missing dependencies
+```
+
+### Option B: Legacy Installation (Development)
+
+Run the old install script if building on a non-Debian system:
 
 ```bash
 sudo bash install.sh
@@ -183,13 +200,16 @@ For full investigation steps, see [How2Get_Good_Addresses.md](./How2Get_Good_Add
   - **Secure Boot must be disabled** in your BIOS/UEFI to prevent kernel lockdown from blocking write operations to `/sys/kernel/debug/ec/ec0/io`.
 
 > [!NOTE]
-> Future releases aim to support dynamic register probing, automated initial calibration, and cross-brand drivers. See the [ROADMAP.md](./backend/ROADMAP.md) for more details.
+> We are transitioning `chorechill-ctl` to a plugin-based architecture with DMI-based motherboard auto-detection. See the [ROADMAP.md](./backend/ROADMAP.md) for more details.
 
 ---
 
 ## Roadmap
 
 - [x] Create a graphical curve editor allowing users to drag 7 points to configure their custom profile.
+- [ ] Implement system DMI/motherboard configuration auto-detection.
+- [ ] Refactor C hardware/EC interactions into modular dynamic load plugins (`.so` drivers).
+- [ ] Migrate completely to `.deb` package distribution and deprecate `install.sh`.
 
 ---
 
